@@ -51,7 +51,7 @@ pub struct Tab {
     pub search_handle:         SearchHandle,
     pub search_in_progress:    bool,
     pub compiled_search_regex: Option<regex::Regex>,
-    pub file_data_arc:         Arc<Vec<u8>>,
+    pub file_data_arc:         Arc<dyn AsRef<[u8]> + Send + Sync>,
     pub line_offsets_arc:      Arc<Vec<u64>>,
     pub hidden_levels:         HashSet<flash_core::LogLevel>,
     pub line_filter_query:     String,
@@ -82,7 +82,7 @@ impl Tab {
     pub fn rebuild_line_filter(&mut self) {
         let active = !self.hidden_levels.is_empty() || !self.line_filter_query.is_empty();
         if !active { self.active_line_filter = None; self.scroll_offset = 0; return; }
-        let reader      = LineReader::new(&self.open_file.file_map, &self.open_file.line_index);
+        let reader      = LineReader::new(self.file_data_arc.as_ref().as_ref(), &self.open_file.line_index);
         let total       = reader.line_count();
         let q_lower     = self.line_filter_query.to_lowercase();
         let mut indices = Vec::new();
@@ -156,9 +156,9 @@ pub struct PaletteCmd {
 pub enum Message {
     FileOpen,
     FileDrop(PathBuf),
-    FileLoaded(Result<(PathBuf, Vec<u8>), String>),
+    FileLoaded(Result<(PathBuf, Option<Vec<u8>>), String>),
     ReloadActiveFile,
-    FileReloaded(Result<(PathBuf, Vec<u8>), String>),
+    FileReloaded(Result<(PathBuf, Option<Vec<u8>>), String>),
     ScrollTo(usize),
     ScrollBy(i64),
     GoToBottom,
@@ -415,9 +415,8 @@ impl App {
             }
 
             Message::FileLoaded(result) => {
-                if let Ok((path, raw)) = result {
-                    let data = ensure_utf8(raw);
-                    if let Some(tab) = build_tab(path.clone(), data) {
+                if let Ok((path, gz_data)) = result {
+                    if let Some(tab) = build_tab(path.clone(), gz_data) {
                         self.tabs.push(tab);
                         self.active_tab = self.tabs.len() - 1;
                         // Recent files (#13)
@@ -438,44 +437,45 @@ impl App {
             }
 
             Message::FileReloaded(result) => {
-                let Ok((path, raw)) = result else { return Task::none(); };
-                let data = ensure_utf8(raw);
+                let Ok((path, gz_data)) = result else { return Task::none(); };
                 let ai = self.active_tab;
                 let Some(tab) = self.tabs.get_mut(ai) else { return Task::none(); };
-                let line_index = LineIndex::build(&data);
+                let Ok(file_map) = FileMap::open(&path) else { return Task::none(); };
+                let data_arc: Arc<dyn AsRef<[u8]> + Send + Sync> = match gz_data {
+                    None    => file_map.clone_mmap_arc(),
+                    Some(v) => Arc::new(ensure_utf8(v)),
+                };
+                let line_index = LineIndex::build(data_arc.as_ref().as_ref());
                 let line_count = line_index.line_count();
                 let mut offsets = Vec::with_capacity(line_count + 1);
                 for i in 0..=line_count { if let Some(o) = line_index.offset(i) { offsets.push(o); } }
-                let file_len = data.len() as u64;
+                let file_len = data_arc.as_ref().as_ref().len() as u64;
                 if offsets.last().copied() != Some(file_len) { offsets.push(file_len); }
-                let data_arc    = Arc::new(data);
-                let offsets_arc = Arc::new(offsets);
-                if let Ok(file_map) = FileMap::open(&path) {
-                    let search_handle = spawn_search_worker(data_arc.clone(), offsets_arc.clone());
-                    tab.search_handle.cancel();
-                    tab.open_file         = OpenFile { file_map, line_index, path };
-                    tab.file_data_arc     = data_arc;
-                    tab.line_offsets_arc  = offsets_arc;
-                    tab.search_handle     = search_handle;
-                    tab.search_results.clear();
-                    tab.search_result_set.clear();
-                    tab.selected_result   = None;
-                    tab.search_in_progress = false;
-                    tab.compiled_search_regex = None;
-                    tab.active_line_filter = None;
-                    // Re-run the search if there was one
-                    if !tab.search_query.is_empty() {
-                        tab.compiled_search_regex = regex::Regex::new(&tab.search_query).ok();
-                        let q = tab.search_query.clone();
-                        tab.search_handle.search(q);
-                        tab.search_in_progress = true;
-                    }
-                    let total = self.tabs[ai].total_visible_lines();
-                    if self.tail_mode {
-                        self.tabs[ai].scroll_offset = total.saturating_sub(self.viewport_lines);
-                    }
-                    self.recalc_viewport();
+                let offsets_arc   = Arc::new(offsets);
+                let search_handle = spawn_search_worker(data_arc.clone(), offsets_arc.clone());
+                tab.search_handle.cancel();
+                tab.open_file         = OpenFile { file_map, line_index, path };
+                tab.file_data_arc     = data_arc;
+                tab.line_offsets_arc  = offsets_arc;
+                tab.search_handle     = search_handle;
+                tab.search_results.clear();
+                tab.search_result_set.clear();
+                tab.selected_result   = None;
+                tab.search_in_progress = false;
+                tab.compiled_search_regex = None;
+                tab.active_line_filter = None;
+                // Re-run the search if there was one
+                if !tab.search_query.is_empty() {
+                    tab.compiled_search_regex = regex::Regex::new(&tab.search_query).ok();
+                    let q = tab.search_query.clone();
+                    tab.search_handle.search(q);
+                    tab.search_in_progress = true;
                 }
+                let total = self.tabs[ai].total_visible_lines();
+                if self.tail_mode {
+                    self.tabs[ai].scroll_offset = total.saturating_sub(self.viewport_lines);
+                }
+                self.recalc_viewport();
             }
 
             // ── Tail mode / file watching (#7 / #8) ──────────────────────────
@@ -586,7 +586,7 @@ impl App {
             // ── Export ───────────────────────────────────────────────────────
             Message::Export => {
                 let Some(tab) = self.tab() else { return Task::none(); };
-                let reader = LineReader::new(&tab.open_file.file_map, &tab.open_file.line_index);
+                let reader = LineReader::new(tab.file_data_arc.as_ref().as_ref(), &tab.open_file.line_index);
                 let text = if !tab.search_results.is_empty() {
                     tab.search_results.iter().map(|(_, t)| t.as_str()).collect::<Vec<_>>().join("\n")
                 } else if let Some(filter) = &tab.active_line_filter {
@@ -724,7 +724,7 @@ impl App {
             Message::CopyToClipboard => {
                 if let Some(tab) = self.tab() {
                     if let Some(n) = tab.selected_line {
-                        let reader = LineReader::new(&tab.open_file.file_map, &tab.open_file.line_index);
+                        let reader = LineReader::new(tab.file_data_arc.as_ref().as_ref(), &tab.open_file.line_index);
                         if let Some(text) = reader.get_line(n) {
                             return iced::clipboard::write(text.to_string());
                         }
@@ -885,7 +885,8 @@ impl App {
         let active = self.tabs.get(self.active_tab);
 
         let file_info = active.map(|t| {
-            (t.file_name(), t.file_data_arc.len() as u64, t.total_lines())
+            let size = t.file_data_arc.as_ref().as_ref().len() as u64;
+            (t.file_name(), size, t.total_lines())
         });
         let search_query       = active.map(|t| t.search_query.as_str()).unwrap_or("");
         let result_count       = active.map(|t| t.search_results.len()).unwrap_or(0);
@@ -907,10 +908,10 @@ impl App {
 
         let filter_bar = views::filter_bar::view(
             hidden_levels, line_filter_q, has_file, filter_count,
-            extra_highlights, search_query, p,
+            extra_highlights, search_query, self.line_wrap, p,
         );
 
-        let reader            = active.map(|t| LineReader::new(&t.open_file.file_map, &t.open_file.line_index));
+        let reader            = active.map(|t| LineReader::new(t.file_data_arc.as_ref().as_ref(), &t.open_file.line_index));
         let total_visible     = active.map(|t| t.total_visible_lines()).unwrap_or(0);
         let active_filter     = active.and_then(|t| t.active_line_filter.as_deref());
         let scroll_offset     = active.map(|t| t.scroll_offset).unwrap_or(0);
@@ -1034,19 +1035,18 @@ impl App {
 // ── Free helpers ──────────────────────────────────────────────────────────────
 
 /// Async helper: read + decompress a file and return (path, bytes).
-async fn load_file(path: PathBuf) -> Result<(PathBuf, Vec<u8>), String> {
-    let raw = tokio::fs::read(&path).await.map_err(|e| e.to_string())?;
-    let data = if path.extension().and_then(|e| e.to_str()) == Some("gz") {
+async fn load_file(path: PathBuf) -> Result<(PathBuf, Option<Vec<u8>>), String> {
+    if path.extension().and_then(|e| e.to_str()) == Some("gz") {
+        let raw = tokio::fs::read(&path).await.map_err(|e| e.to_string())?;
         use flate2::read::GzDecoder;
         use std::io::Read;
         let mut dec = GzDecoder::new(&raw[..]);
         let mut out = Vec::new();
         dec.read_to_end(&mut out).map_err(|e| e.to_string())?;
-        out
+        Ok((path, Some(out)))
     } else {
-        raw
-    };
-    Ok((path, data))
+        Ok((path, None))
+    }
 }
 
 /// If bytes aren't valid UTF-8, do a lossy replacement.
@@ -1058,17 +1058,21 @@ fn ensure_utf8(raw: Vec<u8>) -> Vec<u8> {
     }
 }
 
-/// Build a Tab from a path + raw UTF-8 bytes. Returns None if mmap fails.
-fn build_tab(path: PathBuf, data: Vec<u8>) -> Option<Tab> {
-    let line_index  = LineIndex::build(&data);
+/// Build a Tab from a path. For regular files uses mmap (zero-copy); for gz
+/// files accepts pre-decompressed bytes. Returns None if mmap fails.
+fn build_tab(path: PathBuf, gz_data: Option<Vec<u8>>) -> Option<Tab> {
+    let file_map = FileMap::open(&path).ok()?;
+    let data_arc: Arc<dyn AsRef<[u8]> + Send + Sync> = match gz_data {
+        None    => file_map.clone_mmap_arc(),
+        Some(v) => Arc::new(ensure_utf8(v)),
+    };
+    let line_index  = LineIndex::build(data_arc.as_ref().as_ref());
     let line_count  = line_index.line_count();
     let mut offsets = Vec::with_capacity(line_count + 1);
     for i in 0..=line_count { if let Some(o) = line_index.offset(i) { offsets.push(o); } }
-    let file_len = data.len() as u64;
+    let file_len = data_arc.as_ref().as_ref().len() as u64;
     if offsets.last().copied() != Some(file_len) { offsets.push(file_len); }
-    let data_arc    = Arc::new(data);
-    let offsets_arc = Arc::new(offsets);
-    let file_map    = FileMap::open(&path).ok()?;
+    let offsets_arc   = Arc::new(offsets);
     let search_handle = spawn_search_worker(data_arc.clone(), offsets_arc.clone());
     Some(Tab {
         open_file:             OpenFile { file_map, line_index, path },

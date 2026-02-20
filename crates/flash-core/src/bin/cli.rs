@@ -40,7 +40,7 @@ fn main() {
         index_time.as_secs_f64() * 1000.0
     );
 
-    let reader = LineReader::new(&file_map, &line_index);
+    let reader = LineReader::new(file_map.as_bytes(), &line_index);
     let head_count = 100.min(total_lines);
     let tail_count = 100.min(total_lines);
 

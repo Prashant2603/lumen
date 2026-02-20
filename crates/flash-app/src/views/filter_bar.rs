@@ -12,6 +12,7 @@ pub fn view<'a>(
     active_filter_count: Option<usize>,
     extra_highlights: &[ExtraHighlight],
     search_query: &str,
+    line_wrap: bool,
     p: Palette,
 ) -> Element<'a, Message> {
     let levels: [(LogLevel, &str, Color); 5] = [
@@ -22,14 +23,13 @@ pub fn view<'a>(
         (LogLevel::Error, "ERROR", p.log_error),
     ];
 
-    let bg2 = p.bg_secondary;
     let bdr = p.border;
     let bgh = p.bg_hover;
     let bgp = p.bg_primary;
     let fgm = p.fg_muted;
     let acc = p.accent;
 
-    let mut bar = row![].spacing(5).padding([4, 12]);
+    let mut bar = row![].spacing(5).padding([3, 10]);
 
     for (level, label, color) in levels {
         let hidden = hidden_levels.contains(&level);
@@ -64,29 +64,53 @@ pub fn view<'a>(
         bar = bar.push(btn);
     }
 
+    // ── Wrap toggle — same visual weight as the level chips ───────────────────
+    let wrap_fg  = if line_wrap { acc } else { fgm };
+    let wrap_bg  = if line_wrap { Color { a: 0.15, ..acc } } else { bgp };
+    let wrap_bdr = if line_wrap { Color { a: 0.50, ..acc } } else { bdr };
+    bar = bar.push(
+        button(text("Wrap").size(11).color(wrap_fg))
+            .on_press(Message::WrapToggle)
+            .padding([3, 8])
+            .style(move |_: &iced::Theme, status| button::Style {
+                background: Some(match status {
+                    button::Status::Hovered => bgh.into(),
+                    _ => wrap_bg.into(),
+                }),
+                text_color: wrap_fg,
+                border: iced::Border { color: wrap_bdr, width: 1.0, radius: 3.0.into() },
+                shadow: iced::Shadow::default(),
+            }),
+    );
+
     bar = bar.push(divider(p));
 
-    // Quick filter input
-    let filter_input = text_input("Filter lines…", line_filter)
+    // "Quick filter" label — makes it visually distinct from the regex search above
+    bar = bar.push(
+        text("Filter:").size(11).color(Color { a: 0.45, ..fgm }),
+    );
+
+    // Quick filter input — narrow fixed width, smaller font, different border alpha
+    let filter_input = text_input("text match…", line_filter)
         .on_input(Message::LineFilterChanged)
         .on_submit(Message::Noop)
-        .padding([3, 8])
-        .size(12)
-        .width(Length::Fixed(200.0))
+        .padding([3, 7])
+        .size(11)
+        .width(Length::Fixed(180.0))
         .style(move |_: &iced::Theme, status| text_input::Style {
-            background: bgp.into(),
+            background: p.bg_secondary.into(),
             border: iced::Border {
                 color: match status {
                     text_input::Status::Focused => acc,
-                    _ => bdr,
+                    _ => Color { a: 0.35, ..bdr },
                 },
                 width: 1.0,
                 radius: 3.0.into(),
             },
-            icon: fgm,
-            placeholder: fgm,
-            value: p.fg_primary,
-            selection: acc,
+            icon:        fgm,
+            placeholder: Color { a: 0.35, ..fgm },
+            value:       p.fg_primary,
+            selection:   acc,
         });
     bar = bar.push(filter_input);
 
@@ -176,11 +200,17 @@ pub fn view<'a>(
         bar = bar.push(chip);
     }
 
+    // Use bg_primary (slightly lighter than the toolbar's bg_secondary) so this
+    // row is visually subordinate to the main search bar above it.
     container(bar)
         .width(Length::Fill)
         .style(move |_: &iced::Theme| container::Style {
-            background: Some(bg2.into()),
-            border: iced::Border { color: bdr, width: 1.0, radius: 0.0.into() },
+            background: Some(bgp.into()),
+            border: iced::Border {
+                color: Color { a: 0.25, ..bdr },
+                width: 1.0,
+                radius: 0.0.into(),
+            },
             ..Default::default()
         })
         .into()

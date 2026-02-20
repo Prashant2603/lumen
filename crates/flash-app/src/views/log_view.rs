@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use flash_core::{LineReader, LogLevel};
-use iced::widget::{column, container, mouse_area, rich_text, row, scrollable, span, text, Column};
+use iced::widget::{column, container, mouse_area, rich_text, row, span, text, Column};
 use iced::{Color, Element, Length};
 
 use crate::app::{ExtraHighlight, Message};
@@ -256,48 +256,23 @@ pub fn view<'a>(
     let pbg = p.bg_primary;
     let log_content = Column::with_children(rows);
 
-    // ── Content area: horizontal scroll when not wrapping ────────────────────
-    let content_area: Element<'a, Message> = if line_wrap {
-        container(log_content.width(Length::Fill))
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .style(move |_: &iced::Theme| container::Style {
-                background: Some(pbg.into()),
-                ..Default::default()
-            })
-            .into()
-    } else {
-        let h_scroll = scrollable(log_content.width(Length::Shrink))
-            .direction(scrollable::Direction::Horizontal(
-                scrollable::Scrollbar::new().width(6).scroller_width(6),
-            ))
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .style(move |_: &iced::Theme, _status| scrollable::Style {
-                container: container::Style {
-                    background: Some(pbg.into()),
-                    ..Default::default()
-                },
-                vertical_rail:   scrollable::Rail {
-                    background: None,
-                    border: iced::Border::default(),
-                    scroller: scrollable::Scroller {
-                        color: Color::TRANSPARENT,
-                        border: iced::Border::default(),
-                    },
-                },
-                horizontal_rail: scrollable::Rail {
-                    background: Some(p.bg_secondary.into()),
-                    border: iced::Border::default(),
-                    scroller: scrollable::Scroller {
-                        color: Color::from_rgba(0.6, 0.6, 0.6, 0.45),
-                        border: iced::Border { radius: 3.0.into(), ..Default::default() },
-                    },
-                },
-                gap: None,
-            });
-        h_scroll.into()
-    };
+    // ── Content area ──────────────────────────────────────────────────────────
+    // We use a plain clipping container here (no scrollable widget).
+    // A horizontal scrollable was previously present but it intercepted ALL
+    // mouse-wheel y-delta events (mapping them to horizontal movement), which
+    // prevented the virtual vertical scroll from ever firing.  Clipping long
+    // lines is the correct trade-off: the minimap + line-wrap mode cover the
+    // "I need to see long lines" case, while vertical scrolling always works.
+    let content_w = if line_wrap { Length::Fill } else { Length::Shrink };
+    let content_area: Element<'a, Message> = container(log_content.width(content_w))
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .clip(true)
+        .style(move |_: &iced::Theme| container::Style {
+            background: Some(pbg.into()),
+            ..Default::default()
+        })
+        .into();
 
     let minimap   = build_minimap(scroll_offset, total_lines, viewport_lines, search_result_set, bookmarks, p);
     let main_area = row![content_area, minimap].height(Length::Fill);

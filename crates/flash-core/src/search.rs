@@ -75,10 +75,11 @@ impl Drop for SearchHandle {
 
 /// Spawn a background search worker that operates on the given file data.
 ///
-/// The worker holds references to the file data via an Arc, so the caller
-/// must ensure the data outlives the worker (enforced by Arc).
+/// `file_data` is a trait object so it can be backed by either a memory-mapped
+/// file (`Arc<Mmap>`) or a decompressed buffer (`Arc<Vec<u8>>`).  The Arc keeps
+/// the data alive for the full lifetime of the worker thread.
 pub fn spawn_search_worker(
-    file_data: Arc<Vec<u8>>,
+    file_data: Arc<dyn AsRef<[u8]> + Send + Sync>,
     line_offsets: Arc<Vec<u64>>,
 ) -> SearchHandle {
     let (cmd_tx, cmd_rx) = crossbeam_channel::unbounded::<SearchCommand>();
@@ -87,7 +88,9 @@ pub fn spawn_search_worker(
     let cancel = cancel_flag.clone();
 
     thread::spawn(move || {
-        worker_loop(&cmd_rx, &resp_tx, &cancel, &file_data, &line_offsets);
+        // Obtain &[u8] from the trait object; lifetime is tied to the Arc.
+        let data: &[u8] = (*file_data).as_ref();
+        worker_loop(&cmd_rx, &resp_tx, &cancel, data, &line_offsets);
     });
 
     SearchHandle {
