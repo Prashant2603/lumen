@@ -1,0 +1,3 @@
+[workspace]
+members = ["crates/flash-core", "crates/flash-app"]
+resolver = "2"

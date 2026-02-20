@@ -1,0 +1,13 @@
+[package]
+name = "flash-core"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "flash-cli"
+path = "src/bin/cli.rs"
+
+[dependencies]
+memmap2 = "0.9"
+regex = "1"
+crossbeam-channel = "0.5"

@@ -1,0 +1,13 @@
+[package]
+name = "flash-app"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+flash-core = { path = "../flash-core" }
+iced = { version = "0.13", features = ["tokio"] }
+rfd = "0.15"
+tokio = { version = "1", features = ["rt-multi-thread", "fs"] }
+regex = "1"
+flate2 = "1"
+notify = "6"

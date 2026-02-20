@@ -1,0 +1,500 @@
+2026-02-14T08:00:00.000Z  [DEBUG]  scheduler    thread-8  connection pool size: 8
+2026-02-14T08:00:00.148Z  [WARN ]  db           thread-2  memory usage at 78%
+2026-02-14T08:00:01.580Z  [INFO ]  http         thread-1  processed 1000 records
+2026-02-14T08:00:01.890Z  [INFO ]  auth         thread-6  health check passed
+2026-02-14T08:00:03.421Z  [ERROR]  db           thread-4  failed to write file: disk full
+2026-02-14T08:00:05.578Z  [DEBUG]  worker       thread-5  parsed config: timeout=30s
+2026-02-14T08:00:07.392Z  [ERROR]  grpc         thread-1  token validation failed
+2026-02-14T08:00:08.948Z  [DEBUG]  db           thread-2  query took 12ms
+2026-02-14T08:00:09.088Z  [WARN ]  config       thread-3  cert expires in 7 days
+2026-02-14T08:00:09.990Z  [TRACE]  api          thread-3  poll returned Pending
+2026-02-14T08:00:10.590Z  [TRACE]  cache        thread-2  entering function process_request
+2026-02-14T08:00:12.322Z  [INFO ]  auth         thread-3  backup completed in 3.2s
+2026-02-14T08:00:12.531Z  [WARN ]  worker       thread-1  memory usage at 78%
+2026-02-14T08:00:14.102Z  [INFO ]  config       thread-3  backup completed in 3.2s
+2026-02-14T08:00:14.977Z  [INFO ]  db           thread-1  processed 1000 records
+2026-02-14T08:00:17.075Z  [DEBUG]  auth         thread-5  parsed config: timeout=30s
+2026-02-14T08:00:17.330Z  [INFO ]  api          thread-5  user alice logged in
+2026-02-14T08:00:19.753Z  [INFO ]  metrics      thread-7  server started on :8080
+2026-02-14T08:00:21.799Z  [INFO ]  auth         thread-4  backup completed in 3.2s
+2026-02-14T08:00:22.200Z  [ERROR]  db           thread-8  token validation failed
+2026-02-14T08:00:23.228Z  [ERROR]  http         thread-8  timeout after 30s
+2026-02-14T08:00:23.622Z  [INFO ]  scheduler    thread-8  user alice logged in
+2026-02-14T08:00:25.713Z  [INFO ]  http         thread-6  server started on :8080
+2026-02-14T08:00:26.815Z  [TRACE]  metrics      thread-2  stack frame depth: 4
+2026-02-14T08:00:28.208Z  [TRACE]  worker       thread-7  raw bytes: 0xdeadbeef
+2026-02-14T08:00:29.189Z  [INFO ]  grpc         thread-8  server started on :8080
+2026-02-14T08:00:30.819Z  [WARN ]  grpc         thread-7  deprecated API endpoint called
+2026-02-14T08:00:31.335Z  [INFO ]  grpc         thread-4  health check passed
+2026-02-14T08:00:32.384Z  [INFO ]  grpc         thread-2  health check passed
+2026-02-14T08:00:34.317Z  [INFO ]  cache        thread-3  user alice logged in
+2026-02-14T08:00:34.830Z  [DEBUG]  metrics      thread-8  parsed config: timeout=30s
+2026-02-14T08:00:35.307Z  [INFO ]  http         thread-2  processed 1000 records
+2026-02-14T08:00:36.365Z  [WARN ]  api          thread-6  cert expires in 7 days
+2026-02-14T08:00:36.475Z  [INFO ]  api          thread-8  server started on :8080
+2026-02-14T08:00:36.964Z  [WARN ]  db           thread-5  queue depth: 9500
+2026-02-14T08:00:37.991Z  [INFO ]  auth         thread-4  processed 1000 records
+2026-02-14T08:00:38.698Z  [INFO ]  scheduler    thread-6  health check passed
+2026-02-14T08:00:40.679Z  [INFO ]  worker       thread-1  server started on :8080
+2026-02-14T08:00:41.922Z  [DEBUG]  worker       thread-8  parsed config: timeout=30s
+2026-02-14T08:00:43.732Z  [INFO ]  api          thread-7  processed 1000 records
+2026-02-14T08:00:44.857Z  [INFO ]  http         thread-6  processed 1000 records
+2026-02-14T08:00:46.344Z  [INFO ]  worker       thread-6  server started on :8080
+2026-02-14T08:00:46.937Z  [TRACE]  metrics      thread-7  lock acquired on mutex
+2026-02-14T08:00:48.296Z  [DEBUG]  http         thread-8  cache miss for key user:123
+2026-02-14T08:00:49.844Z  [DEBUG]  auth         thread-3  connection pool size: 8
+2026-02-14T08:00:50.586Z  [WARN ]  http         thread-2  slow query detected (>500ms)
+2026-02-14T08:00:53.013Z  [INFO ]  worker       thread-1  user alice logged in
+2026-02-14T08:00:53.861Z  [INFO ]  http         thread-7  user alice logged in
+2026-02-14T08:00:54.189Z  [WARN ]  api          thread-8  memory usage at 78%
+2026-02-14T08:00:55.185Z  [INFO ]  db           thread-3  processed 1000 records
+2026-02-14T08:00:55.710Z  [DEBUG]  grpc         thread-1  cache miss for key user:123
+2026-02-14T08:00:56.130Z  [DEBUG]  scheduler    thread-4  retry attempt 1/3
+2026-02-14T08:00:57.630Z  [WARN ]  http         thread-3  memory usage at 78%
+2026-02-14T08:00:59.501Z  [WARN ]  metrics      thread-7  cert expires in 7 days
+2026-02-14T08:01:00.136Z  [TRACE]  api          thread-2  entering function process_request
+2026-02-14T08:01:00.284Z  [DEBUG]  auth         thread-8  parsed config: timeout=30s
+2026-02-14T08:01:02.350Z  [INFO ]  config       thread-7  backup completed in 3.2s
+2026-02-14T08:01:03.750Z  [INFO ]  grpc         thread-6  server started on :8080
+2026-02-14T08:01:05.834Z  [INFO ]  config       thread-8  health check passed
+2026-02-14T08:01:08.105Z  [INFO ]  api          thread-1  user alice logged in
+2026-02-14T08:01:09.978Z  [DEBUG]  auth         thread-6  retry attempt 1/3
+2026-02-14T08:01:10.631Z  [DEBUG]  api          thread-1  connection pool size: 8
+2026-02-14T08:01:13.057Z  [ERROR]  metrics      thread-2  panic: nil pointer dereference
+2026-02-14T08:01:15.515Z  [WARN ]  db           thread-4  queue depth: 9500
+2026-02-14T08:01:17.235Z  [DEBUG]  db           thread-2  retry attempt 1/3
+2026-02-14T08:01:19.523Z  [WARN ]  metrics      thread-7  slow query detected (>500ms)
+2026-02-14T08:01:20.434Z  [DEBUG]  grpc         thread-4  query took 12ms
+2026-02-14T08:01:20.799Z  [INFO ]  auth         thread-5  server started on :8080
+2026-02-14T08:01:21.984Z  [WARN ]  db           thread-1  cert expires in 7 days
+2026-02-14T08:01:23.711Z  [ERROR]  auth         thread-1  token validation failed
+2026-02-14T08:01:25.707Z  [WARN ]  metrics      thread-7  cert expires in 7 days
+2026-02-14T08:01:27.179Z  [ERROR]  db           thread-6  connection refused to postgres:5432
+2026-02-14T08:01:29.001Z  [DEBUG]  db           thread-5  connection pool size: 8
+2026-02-14T08:01:30.409Z  [ERROR]  grpc         thread-1  connection refused to postgres:5432
+2026-02-14T08:01:31.927Z  [WARN ]  config       thread-2  slow query detected (>500ms)
+2026-02-14T08:01:32.167Z  [ERROR]  api          thread-3  connection refused to postgres:5432
+2026-02-14T08:01:33.618Z  [WARN ]  cache        thread-5  deprecated API endpoint called
+2026-02-14T08:01:34.524Z  [DEBUG]  metrics      thread-7  retry attempt 1/3
+2026-02-14T08:01:34.624Z  [INFO ]  api          thread-3  processed 1000 records
+2026-02-14T08:01:37.043Z  [TRACE]  worker       thread-8  raw bytes: 0xdeadbeef
+2026-02-14T08:01:38.023Z  [INFO ]  cache        thread-2  health check passed
+2026-02-14T08:01:39.737Z  [INFO ]  config       thread-3  server started on :8080
+2026-02-14T08:01:40.500Z  [ERROR]  metrics      thread-2  token validation failed
+2026-02-14T08:01:41.027Z  [ERROR]  cache        thread-5  panic: nil pointer dereference
+2026-02-14T08:01:42.252Z  [ERROR]  scheduler    thread-1  connection refused to postgres:5432
+2026-02-14T08:01:42.874Z  [DEBUG]  scheduler    thread-8  connection pool size: 8
+2026-02-14T08:01:45.252Z  [INFO ]  grpc         thread-7  user alice logged in
+2026-02-14T08:01:46.978Z  [INFO ]  api          thread-4  user alice logged in
+2026-02-14T08:01:48.431Z  [INFO ]  cache        thread-6  health check passed
+2026-02-14T08:01:50.430Z  [INFO ]  db           thread-1  server started on :8080
+2026-02-14T08:01:52.487Z  [INFO ]  scheduler    thread-7  user alice logged in
+2026-02-14T08:01:53.464Z  [INFO ]  grpc         thread-2  user alice logged in
+2026-02-14T08:01:55.795Z  [ERROR]  http         thread-3  panic: nil pointer dereference
+2026-02-14T08:01:57.185Z  [WARN ]  config       thread-5  slow query detected (>500ms)
+2026-02-14T08:01:58.669Z  [DEBUG]  db           thread-5  connection pool size: 8
+2026-02-14T08:01:59.511Z  [DEBUG]  auth         thread-4  connection pool size: 8
+2026-02-14T08:02:00.969Z  [DEBUG]  scheduler    thread-6  cache miss for key user:123
+2026-02-14T08:02:02.582Z  [INFO ]  db           thread-2  health check passed
+2026-02-14T08:02:04.643Z  [INFO ]  grpc         thread-2  processed 1000 records
+2026-02-14T08:02:06.091Z  [INFO ]  api          thread-3  server started on :8080
+2026-02-14T08:02:06.940Z  [INFO ]  config       thread-3  processed 1000 records
+2026-02-14T08:02:09.268Z  [INFO ]  grpc         thread-5  health check passed
+2026-02-14T08:02:11.451Z  [INFO ]  http         thread-5  server started on :8080
+2026-02-14T08:02:13.167Z  [TRACE]  cache        thread-5  raw bytes: 0xdeadbeef
+2026-02-14T08:02:14.692Z  [INFO ]  auth         thread-6  health check passed
+2026-02-14T08:02:15.688Z  [WARN ]  cache        thread-7  deprecated API endpoint called
+2026-02-14T08:02:18.021Z  [INFO ]  grpc         thread-7  server started on :8080
+2026-02-14T08:02:18.402Z  [WARN ]  worker       thread-6  queue depth: 9500
+2026-02-14T08:02:18.525Z  [INFO ]  scheduler    thread-7  server started on :8080
+2026-02-14T08:02:20.705Z  [INFO ]  http         thread-8  user alice logged in
+2026-02-14T08:02:22.078Z  [TRACE]  worker       thread-7  lock acquired on mutex
+2026-02-14T08:02:23.606Z  [DEBUG]  http         thread-3  query took 12ms
+2026-02-14T08:02:25.841Z  [INFO ]  config       thread-7  server started on :8080
+2026-02-14T08:02:26.461Z  [INFO ]  api          thread-6  health check passed
+2026-02-14T08:02:27.042Z  [INFO ]  http         thread-4  server started on :8080
+2026-02-14T08:02:28.306Z  [TRACE]  metrics      thread-8  lock acquired on mutex
+2026-02-14T08:02:30.538Z  [INFO ]  auth         thread-3  user alice logged in
+2026-02-14T08:02:30.785Z  [DEBUG]  api          thread-3  retry attempt 1/3
+2026-02-14T08:02:30.940Z  [DEBUG]  cache        thread-4  connection pool size: 8
+2026-02-14T08:02:32.157Z  [INFO ]  http         thread-5  server started on :8080
+2026-02-14T08:02:34.609Z  [INFO ]  db           thread-8  health check passed
+2026-02-14T08:02:36.594Z  [INFO ]  cache        thread-3  user alice logged in
+2026-02-14T08:02:36.785Z  [DEBUG]  cache        thread-5  connection pool size: 8
+2026-02-14T08:02:38.771Z  [INFO ]  cache        thread-2  health check passed
+2026-02-14T08:02:40.480Z  [INFO ]  grpc         thread-8  backup completed in 3.2s
+2026-02-14T08:02:41.252Z  [INFO ]  db           thread-4  processed 1000 records
+2026-02-14T08:02:42.083Z  [INFO ]  scheduler    thread-5  user alice logged in
+2026-02-14T08:02:43.302Z  [INFO ]  http         thread-4  health check passed
+2026-02-14T08:02:45.238Z  [DEBUG]  db           thread-7  parsed config: timeout=30s
+2026-02-14T08:02:47.311Z  [INFO ]  auth         thread-7  processed 1000 records
+2026-02-14T08:02:49.366Z  [INFO ]  auth         thread-2  user alice logged in
+2026-02-14T08:02:50.694Z  [DEBUG]  db           thread-8  retry attempt 1/3
+2026-02-14T08:02:52.982Z  [TRACE]  grpc         thread-3  poll returned Pending
+2026-02-14T08:02:54.804Z  [DEBUG]  worker       thread-2  cache miss for key user:123
+2026-02-14T08:02:56.114Z  [INFO ]  db           thread-1  health check passed
+2026-02-14T08:02:56.386Z  [INFO ]  auth         thread-8  backup completed in 3.2s
+2026-02-14T08:02:58.256Z  [INFO ]  metrics      thread-1  backup completed in 3.2s
+2026-02-14T08:02:59.916Z  [INFO ]  config       thread-3  health check passed
+2026-02-14T08:03:00.112Z  [ERROR]  scheduler    thread-2  token validation failed
+2026-02-14T08:03:00.674Z  [DEBUG]  worker       thread-3  cache miss for key user:123
+2026-02-14T08:03:01.690Z  [TRACE]  http         thread-3  raw bytes: 0xdeadbeef
+2026-02-14T08:03:02.244Z  [INFO ]  api          thread-1  processed 1000 records
+2026-02-14T08:03:02.959Z  [INFO ]  db           thread-8  backup completed in 3.2s
+2026-02-14T08:03:05.404Z  [WARN ]  http         thread-1  queue depth: 9500
+2026-02-14T08:03:05.650Z  [INFO ]  api          thread-1  processed 1000 records
+2026-02-14T08:03:05.914Z  [TRACE]  db           thread-6  entering function process_request
+2026-02-14T08:03:06.697Z  [INFO ]  grpc         thread-3  user alice logged in
+2026-02-14T08:03:08.244Z  [DEBUG]  http         thread-2  cache miss for key user:123
+2026-02-14T08:03:09.744Z  [INFO ]  cache        thread-6  backup completed in 3.2s
+2026-02-14T08:03:11.891Z  [INFO ]  auth         thread-6  backup completed in 3.2s
+2026-02-14T08:03:12.999Z  [DEBUG]  grpc         thread-4  query took 12ms
+2026-02-14T08:03:13.845Z  [INFO ]  db           thread-3  processed 1000 records
+2026-02-14T08:03:16.157Z  [WARN ]  grpc         thread-2  slow query detected (>500ms)
+2026-02-14T08:03:18.273Z  [INFO ]  db           thread-2  processed 1000 records
+2026-02-14T08:03:20.756Z  [DEBUG]  worker       thread-8  parsed config: timeout=30s
+2026-02-14T08:03:21.780Z  [TRACE]  scheduler    thread-7  entering function process_request
+2026-02-14T08:03:22.409Z  [INFO ]  cache        thread-5  processed 1000 records
+2026-02-14T08:03:22.879Z  [INFO ]  http         thread-6  processed 1000 records
+2026-02-14T08:03:25.048Z  [DEBUG]  auth         thread-8  cache miss for key user:123
+2026-02-14T08:03:27.038Z  [INFO ]  api          thread-6  health check passed
+2026-02-14T08:03:27.826Z  [INFO ]  metrics      thread-5  health check passed
+2026-02-14T08:03:28.756Z  [INFO ]  http         thread-4  server started on :8080
+2026-02-14T08:03:29.094Z  [DEBUG]  grpc         thread-3  retry attempt 1/3
+2026-02-14T08:03:29.201Z  [DEBUG]  http         thread-5  query took 12ms
+2026-02-14T08:03:30.982Z  [INFO ]  metrics      thread-5  backup completed in 3.2s
+2026-02-14T08:03:31.663Z  [INFO ]  config       thread-7  health check passed
+2026-02-14T08:03:33.104Z  [TRACE]  metrics      thread-7  poll returned Pending
+2026-02-14T08:03:34.080Z  [INFO ]  auth         thread-7  backup completed in 3.2s
+2026-02-14T08:03:35.697Z  [TRACE]  metrics      thread-2  entering function process_request
+2026-02-14T08:03:35.858Z  [INFO ]  scheduler    thread-6  backup completed in 3.2s
+2026-02-14T08:03:36.236Z  [INFO ]  metrics      thread-6  backup completed in 3.2s
+2026-02-14T08:03:38.108Z  [DEBUG]  config       thread-6  retry attempt 1/3
+2026-02-14T08:03:38.947Z  [INFO ]  grpc         thread-6  health check passed
+2026-02-14T08:03:40.266Z  [TRACE]  auth         thread-7  lock acquired on mutex
+2026-02-14T08:03:41.950Z  [WARN ]  scheduler    thread-7  memory usage at 78%
+2026-02-14T08:03:42.102Z  [INFO ]  worker       thread-4  server started on :8080
+2026-02-14T08:03:42.542Z  [DEBUG]  db           thread-6  cache miss for key user:123
+2026-02-14T08:03:43.952Z  [INFO ]  auth         thread-3  processed 1000 records
+2026-02-14T08:03:46.332Z  [INFO ]  scheduler    thread-5  processed 1000 records
+2026-02-14T08:03:47.482Z  [INFO ]  db           thread-5  server started on :8080
+2026-02-14T08:03:49.223Z  [INFO ]  http         thread-2  user alice logged in
+2026-02-14T08:03:51.427Z  [WARN ]  scheduler    thread-2  cert expires in 7 days
+2026-02-14T08:03:53.659Z  [INFO ]  worker       thread-1  health check passed
+2026-02-14T08:03:53.860Z  [WARN ]  worker       thread-1  queue depth: 9500
+2026-02-14T08:03:55.214Z  [INFO ]  db           thread-6  health check passed
+2026-02-14T08:03:56.832Z  [TRACE]  scheduler    thread-5  raw bytes: 0xdeadbeef
+2026-02-14T08:03:57.218Z  [WARN ]  scheduler    thread-6  deprecated API endpoint called
+2026-02-14T08:03:58.470Z  [DEBUG]  auth         thread-5  cache miss for key user:123
+2026-02-14T08:03:59.990Z  [WARN ]  metrics      thread-8  deprecated API endpoint called
+2026-02-14T08:04:00.646Z  [INFO ]  api          thread-2  health check passed
+2026-02-14T08:04:02.279Z  [INFO ]  cache        thread-5  processed 1000 records
+2026-02-14T08:04:04.513Z  [DEBUG]  http         thread-6  cache miss for key user:123
+2026-02-14T08:04:04.706Z  [INFO ]  grpc         thread-5  server started on :8080
+2026-02-14T08:04:06.669Z  [INFO ]  api          thread-5  server started on :8080
+2026-02-14T08:04:07.494Z  [WARN ]  grpc         thread-7  memory usage at 78%
+2026-02-14T08:04:09.901Z  [WARN ]  worker       thread-1  cert expires in 7 days
+2026-02-14T08:04:11.793Z  [INFO ]  config       thread-6  processed 1000 records
+2026-02-14T08:04:12.115Z  [WARN ]  config       thread-2  deprecated API endpoint called
+2026-02-14T08:04:12.761Z  [ERROR]  metrics      thread-3  token validation failed
+2026-02-14T08:04:14.293Z  [WARN ]  api          thread-7  deprecated API endpoint called
+2026-02-14T08:04:14.485Z  [DEBUG]  scheduler    thread-6  retry attempt 1/3
+2026-02-14T08:04:15.044Z  [WARN ]  http         thread-1  queue depth: 9500
+2026-02-14T08:04:15.245Z  [DEBUG]  scheduler    thread-3  parsed config: timeout=30s
+2026-02-14T08:04:17.661Z  [DEBUG]  config       thread-8  connection pool size: 8
+2026-02-14T08:04:19.410Z  [INFO ]  worker       thread-6  user alice logged in
+2026-02-14T08:04:21.085Z  [INFO ]  http         thread-7  processed 1000 records
+2026-02-14T08:04:22.125Z  [DEBUG]  worker       thread-4  connection pool size: 8
+2026-02-14T08:04:22.668Z  [INFO ]  cache        thread-7  user alice logged in
+2026-02-14T08:04:25.052Z  [INFO ]  scheduler    thread-2  health check passed
+2026-02-14T08:04:26.601Z  [INFO ]  metrics      thread-5  health check passed
+2026-02-14T08:04:28.423Z  [TRACE]  cache        thread-6  raw bytes: 0xdeadbeef
+2026-02-14T08:04:29.632Z  [INFO ]  http         thread-2  health check passed
+2026-02-14T08:04:31.125Z  [INFO ]  db           thread-8  server started on :8080
+2026-02-14T08:04:31.873Z  [INFO ]  cache        thread-8  user alice logged in
+2026-02-14T08:04:33.917Z  [INFO ]  metrics      thread-7  server started on :8080
+2026-02-14T08:04:34.302Z  [ERROR]  db           thread-4  connection refused to postgres:5432
+2026-02-14T08:04:34.972Z  [INFO ]  db           thread-3  backup completed in 3.2s
+2026-02-14T08:04:36.249Z  [WARN ]  grpc         thread-3  cert expires in 7 days
+2026-02-14T08:04:38.640Z  [INFO ]  api          thread-1  user alice logged in
+2026-02-14T08:04:39.103Z  [ERROR]  http         thread-7  timeout after 30s
+2026-02-14T08:04:41.308Z  [TRACE]  db           thread-2  lock acquired on mutex
+2026-02-14T08:04:43.659Z  [INFO ]  worker       thread-4  processed 1000 records
+2026-02-14T08:04:44.659Z  [DEBUG]  metrics      thread-2  retry attempt 1/3
+2026-02-14T08:04:44.973Z  [INFO ]  grpc         thread-2  server started on :8080
+2026-02-14T08:04:46.503Z  [INFO ]  http         thread-5  health check passed
+2026-02-14T08:04:46.984Z  [TRACE]  metrics      thread-1  poll returned Pending
+2026-02-14T08:04:48.387Z  [ERROR]  scheduler    thread-4  token validation failed
+2026-02-14T08:04:49.358Z  [INFO ]  db           thread-4  user alice logged in
+2026-02-14T08:04:51.180Z  [ERROR]  db           thread-1  failed to write file: disk full
+2026-02-14T08:04:52.144Z  [TRACE]  cache        thread-4  stack frame depth: 4
+2026-02-14T08:04:52.608Z  [INFO ]  cache        thread-7  health check passed
+2026-02-14T08:04:53.718Z  [INFO ]  api          thread-1  health check passed
+2026-02-14T08:04:54.000Z  [INFO ]  db           thread-5  user alice logged in
+2026-02-14T08:04:55.178Z  [INFO ]  worker       thread-1  backup completed in 3.2s
+2026-02-14T08:04:55.806Z  [WARN ]  config       thread-3  slow query detected (>500ms)
+2026-02-14T08:04:57.431Z  [INFO ]  scheduler    thread-4  health check passed
+2026-02-14T08:04:59.444Z  [DEBUG]  scheduler    thread-6  connection pool size: 8
+2026-02-14T08:05:01.255Z  [INFO ]  metrics      thread-7  processed 1000 records
+2026-02-14T08:05:02.307Z  [INFO ]  api          thread-8  health check passed
+2026-02-14T08:05:04.268Z  [DEBUG]  db           thread-4  parsed config: timeout=30s
+2026-02-14T08:05:06.539Z  [INFO ]  grpc         thread-3  server started on :8080
+2026-02-14T08:05:07.712Z  [ERROR]  config       thread-5  timeout after 30s
+2026-02-14T08:05:08.209Z  [DEBUG]  metrics      thread-6  parsed config: timeout=30s
+2026-02-14T08:05:08.317Z  [DEBUG]  metrics      thread-3  parsed config: timeout=30s
+2026-02-14T08:05:09.543Z  [TRACE]  http         thread-1  stack frame depth: 4
+2026-02-14T08:05:11.732Z  [INFO ]  metrics      thread-3  health check passed
+2026-02-14T08:05:13.760Z  [INFO ]  config       thread-3  user alice logged in
+2026-02-14T08:05:15.115Z  [INFO ]  auth         thread-3  server started on :8080
+2026-02-14T08:05:16.350Z  [WARN ]  worker       thread-5  queue depth: 9500
+2026-02-14T08:05:17.229Z  [DEBUG]  cache        thread-8  retry attempt 1/3
+2026-02-14T08:05:19.705Z  [WARN ]  cache        thread-7  deprecated API endpoint called
+2026-02-14T08:05:21.347Z  [INFO ]  scheduler    thread-2  user alice logged in
+2026-02-14T08:05:22.265Z  [TRACE]  http         thread-2  lock acquired on mutex
+2026-02-14T08:05:22.383Z  [INFO ]  worker       thread-2  processed 1000 records
+2026-02-14T08:05:23.414Z  [WARN ]  config       thread-8  deprecated API endpoint called
+2026-02-14T08:05:23.546Z  [WARN ]  metrics      thread-1  queue depth: 9500
+2026-02-14T08:05:24.689Z  [WARN ]  cache        thread-5  deprecated API endpoint called
+2026-02-14T08:05:26.562Z  [WARN ]  config       thread-2  deprecated API endpoint called
+2026-02-14T08:05:27.849Z  [INFO ]  metrics      thread-1  server started on :8080
+2026-02-14T08:05:29.952Z  [INFO ]  api          thread-6  server started on :8080
+2026-02-14T08:05:32.218Z  [INFO ]  api          thread-8  backup completed in 3.2s
+2026-02-14T08:05:33.001Z  [INFO ]  metrics      thread-4  health check passed
+2026-02-14T08:05:33.887Z  [TRACE]  worker       thread-4  raw bytes: 0xdeadbeef
+2026-02-14T08:05:34.514Z  [INFO ]  worker       thread-5  processed 1000 records
+2026-02-14T08:05:36.131Z  [WARN ]  api          thread-2  deprecated API endpoint called
+2026-02-14T08:05:37.936Z  [INFO ]  worker       thread-4  backup completed in 3.2s
+2026-02-14T08:05:39.190Z  [INFO ]  worker       thread-7  processed 1000 records
+2026-02-14T08:05:40.686Z  [WARN ]  http         thread-5  memory usage at 78%
+2026-02-14T08:05:42.919Z  [WARN ]  metrics      thread-4  slow query detected (>500ms)
+2026-02-14T08:05:45.030Z  [INFO ]  metrics      thread-4  processed 1000 records
+2026-02-14T08:05:46.734Z  [INFO ]  cache        thread-3  backup completed in 3.2s
+2026-02-14T08:05:47.092Z  [INFO ]  grpc         thread-5  user alice logged in
+2026-02-14T08:05:49.568Z  [TRACE]  metrics      thread-6  entering function process_request
+2026-02-14T08:05:51.892Z  [INFO ]  http         thread-1  backup completed in 3.2s
+2026-02-14T08:05:54.207Z  [TRACE]  http         thread-4  lock acquired on mutex
+2026-02-14T08:05:54.534Z  [INFO ]  grpc         thread-3  processed 1000 records
+2026-02-14T08:05:55.539Z  [DEBUG]  config       thread-2  query took 12ms
+2026-02-14T08:05:57.421Z  [INFO ]  scheduler    thread-2  user alice logged in
+2026-02-14T08:05:59.525Z  [TRACE]  metrics      thread-3  stack frame depth: 4
+2026-02-14T08:06:01.023Z  [DEBUG]  auth         thread-6  query took 12ms
+2026-02-14T08:06:02.298Z  [INFO ]  api          thread-5  health check passed
+2026-02-14T08:06:03.200Z  [INFO ]  cache        thread-1  user alice logged in
+2026-02-14T08:06:05.502Z  [INFO ]  cache        thread-1  health check passed
+2026-02-14T08:06:07.906Z  [INFO ]  cache        thread-1  server started on :8080
+2026-02-14T08:06:08.023Z  [DEBUG]  config       thread-3  connection pool size: 8
+2026-02-14T08:06:08.182Z  [INFO ]  cache        thread-8  server started on :8080
+2026-02-14T08:06:08.784Z  [INFO ]  worker       thread-3  backup completed in 3.2s
+2026-02-14T08:06:09.595Z  [INFO ]  db           thread-4  backup completed in 3.2s
+2026-02-14T08:06:09.825Z  [INFO ]  worker       thread-2  user alice logged in
+2026-02-14T08:06:11.246Z  [TRACE]  config       thread-5  poll returned Pending
+2026-02-14T08:06:11.359Z  [INFO ]  grpc         thread-4  user alice logged in
+2026-02-14T08:06:13.809Z  [INFO ]  metrics      thread-5  server started on :8080
+2026-02-14T08:06:15.259Z  [INFO ]  grpc         thread-5  health check passed
+2026-02-14T08:06:17.375Z  [INFO ]  api          thread-4  processed 1000 records
+2026-02-14T08:06:18.838Z  [DEBUG]  db           thread-5  cache miss for key user:123
+2026-02-14T08:06:19.502Z  [INFO ]  metrics      thread-6  server started on :8080
+2026-02-14T08:06:19.620Z  [INFO ]  metrics      thread-6  processed 1000 records
+2026-02-14T08:06:20.025Z  [DEBUG]  db           thread-2  connection pool size: 8
+2026-02-14T08:06:21.945Z  [WARN ]  cache        thread-7  slow query detected (>500ms)
+2026-02-14T08:06:23.886Z  [INFO ]  auth         thread-4  backup completed in 3.2s
+2026-02-14T08:06:24.258Z  [INFO ]  http         thread-7  user alice logged in
+2026-02-14T08:06:24.525Z  [INFO ]  grpc         thread-1  processed 1000 records
+2026-02-14T08:06:26.425Z  [WARN ]  scheduler    thread-2  cert expires in 7 days
+2026-02-14T08:06:26.547Z  [WARN ]  config       thread-7  queue depth: 9500
+2026-02-14T08:06:27.520Z  [WARN ]  api          thread-2  deprecated API endpoint called
+2026-02-14T08:06:29.496Z  [INFO ]  auth         thread-4  user alice logged in
+2026-02-14T08:06:31.250Z  [DEBUG]  worker       thread-3  retry attempt 1/3
+2026-02-14T08:06:32.895Z  [DEBUG]  scheduler    thread-1  query took 12ms
+2026-02-14T08:06:34.846Z  [DEBUG]  auth         thread-1  parsed config: timeout=30s
+2026-02-14T08:06:36.597Z  [ERROR]  cache        thread-6  token validation failed
+2026-02-14T08:06:38.610Z  [DEBUG]  api          thread-5  retry attempt 1/3
+2026-02-14T08:06:39.774Z  [INFO ]  scheduler    thread-8  user alice logged in
+2026-02-14T08:06:41.307Z  [INFO ]  metrics      thread-4  backup completed in 3.2s
+2026-02-14T08:06:42.201Z  [ERROR]  db           thread-4  panic: nil pointer dereference
+2026-02-14T08:06:44.595Z  [DEBUG]  worker       thread-6  connection pool size: 8
+2026-02-14T08:06:44.910Z  [DEBUG]  auth         thread-8  retry attempt 1/3
+2026-02-14T08:06:45.071Z  [INFO ]  auth         thread-6  server started on :8080
+2026-02-14T08:06:46.237Z  [WARN ]  config       thread-4  memory usage at 78%
+2026-02-14T08:06:48.554Z  [WARN ]  auth         thread-8  memory usage at 78%
+2026-02-14T08:06:50.998Z  [WARN ]  cache        thread-4  slow query detected (>500ms)
+2026-02-14T08:06:52.395Z  [ERROR]  db           thread-6  token validation failed
+2026-02-14T08:06:52.575Z  [WARN ]  grpc         thread-1  slow query detected (>500ms)
+2026-02-14T08:06:54.838Z  [DEBUG]  config       thread-8  retry attempt 1/3
+2026-02-14T08:06:55.081Z  [WARN ]  scheduler    thread-7  memory usage at 78%
+2026-02-14T08:06:55.387Z  [INFO ]  config       thread-3  server started on :8080
+2026-02-14T08:06:57.551Z  [DEBUG]  metrics      thread-4  connection pool size: 8
+2026-02-14T08:06:59.016Z  [WARN ]  grpc         thread-7  slow query detected (>500ms)
+2026-02-14T08:06:59.991Z  [DEBUG]  db           thread-1  query took 12ms
+2026-02-14T08:07:00.120Z  [WARN ]  db           thread-7  cert expires in 7 days
+2026-02-14T08:07:00.348Z  [DEBUG]  config       thread-3  cache miss for key user:123
+2026-02-14T08:07:02.230Z  [ERROR]  auth         thread-8  failed to write file: disk full
+2026-02-14T08:07:03.260Z  [TRACE]  http         thread-4  raw bytes: 0xdeadbeef
+2026-02-14T08:07:05.018Z  [DEBUG]  scheduler    thread-4  retry attempt 1/3
+2026-02-14T08:07:06.785Z  [DEBUG]  grpc         thread-6  query took 12ms
+2026-02-14T08:07:09.185Z  [TRACE]  http         thread-1  poll returned Pending
+2026-02-14T08:07:11.489Z  [ERROR]  grpc         thread-8  failed to write file: disk full
+2026-02-14T08:07:13.005Z  [WARN ]  db           thread-4  slow query detected (>500ms)
+2026-02-14T08:07:14.022Z  [ERROR]  db           thread-7  failed to write file: disk full
+2026-02-14T08:07:15.422Z  [WARN ]  config       thread-3  deprecated API endpoint called
+2026-02-14T08:07:16.974Z  [INFO ]  auth         thread-7  health check passed
+2026-02-14T08:07:18.441Z  [INFO ]  db           thread-6  backup completed in 3.2s
+2026-02-14T08:07:20.530Z  [TRACE]  http         thread-3  poll returned Pending
+2026-02-14T08:07:20.965Z  [DEBUG]  worker       thread-3  query took 12ms
+2026-02-14T08:07:23.032Z  [INFO ]  worker       thread-1  server started on :8080
+2026-02-14T08:07:23.835Z  [DEBUG]  worker       thread-2  cache miss for key user:123
+2026-02-14T08:07:24.209Z  [INFO ]  db           thread-4  processed 1000 records
+2026-02-14T08:07:26.492Z  [INFO ]  metrics      thread-1  server started on :8080
+2026-02-14T08:07:28.369Z  [INFO ]  config       thread-1  health check passed
+2026-02-14T08:07:30.610Z  [DEBUG]  worker       thread-2  query took 12ms
+2026-02-14T08:07:31.330Z  [WARN ]  cache        thread-2  slow query detected (>500ms)
+2026-02-14T08:07:32.572Z  [INFO ]  grpc         thread-7  backup completed in 3.2s
+2026-02-14T08:07:33.070Z  [WARN ]  metrics      thread-8  deprecated API endpoint called
+2026-02-14T08:07:33.600Z  [INFO ]  config       thread-7  health check passed
+2026-02-14T08:07:35.476Z  [ERROR]  worker       thread-5  failed to write file: disk full
+2026-02-14T08:07:37.805Z  [INFO ]  db           thread-5  backup completed in 3.2s
+2026-02-14T08:07:39.705Z  [INFO ]  scheduler    thread-4  user alice logged in
+2026-02-14T08:07:41.679Z  [TRACE]  api          thread-5  entering function process_request
+2026-02-14T08:07:42.954Z  [TRACE]  grpc         thread-8  lock acquired on mutex
+2026-02-14T08:07:44.194Z  [DEBUG]  config       thread-1  retry attempt 1/3
+2026-02-14T08:07:44.877Z  [WARN ]  metrics      thread-4  cert expires in 7 days
+2026-02-14T08:07:45.661Z  [TRACE]  worker       thread-4  lock acquired on mutex
+2026-02-14T08:07:47.492Z  [DEBUG]  http         thread-2  parsed config: timeout=30s
+2026-02-14T08:07:49.205Z  [INFO ]  api          thread-3  processed 1000 records
+2026-02-14T08:07:49.437Z  [INFO ]  auth         thread-1  health check passed
+2026-02-14T08:07:49.823Z  [INFO ]  db           thread-3  health check passed
+2026-02-14T08:07:50.709Z  [INFO ]  worker       thread-8  user alice logged in
+2026-02-14T08:07:53.023Z  [DEBUG]  grpc         thread-5  parsed config: timeout=30s
+2026-02-14T08:07:53.859Z  [WARN ]  cache        thread-3  queue depth: 9500
+2026-02-14T08:07:55.494Z  [INFO ]  grpc         thread-3  server started on :8080
+2026-02-14T08:07:56.840Z  [DEBUG]  scheduler    thread-2  retry attempt 1/3
+2026-02-14T08:07:57.411Z  [INFO ]  auth         thread-6  server started on :8080
+2026-02-14T08:07:58.121Z  [INFO ]  cache        thread-8  server started on :8080
+2026-02-14T08:07:59.703Z  [INFO ]  metrics      thread-5  user alice logged in
+2026-02-14T08:08:01.334Z  [ERROR]  db           thread-8  token validation failed
+2026-02-14T08:08:02.445Z  [INFO ]  auth         thread-6  health check passed
+2026-02-14T08:08:04.596Z  [INFO ]  metrics      thread-6  backup completed in 3.2s
+2026-02-14T08:08:05.867Z  [INFO ]  metrics      thread-5  processed 1000 records
+2026-02-14T08:08:06.258Z  [WARN ]  metrics      thread-8  memory usage at 78%
+2026-02-14T08:08:07.703Z  [ERROR]  db           thread-7  token validation failed
+2026-02-14T08:08:08.170Z  [TRACE]  http         thread-6  lock acquired on mutex
+2026-02-14T08:08:08.714Z  [ERROR]  api          thread-6  timeout after 30s
+2026-02-14T08:08:10.664Z  [INFO ]  metrics      thread-4  processed 1000 records
+2026-02-14T08:08:12.196Z  [INFO ]  auth         thread-7  health check passed
+2026-02-14T08:08:14.291Z  [DEBUG]  http         thread-8  retry attempt 1/3
+2026-02-14T08:08:15.046Z  [INFO ]  worker       thread-1  user alice logged in
+2026-02-14T08:08:16.756Z  [DEBUG]  db           thread-4  retry attempt 1/3
+2026-02-14T08:08:18.439Z  [INFO ]  config       thread-6  backup completed in 3.2s
+2026-02-14T08:08:18.934Z  [INFO ]  scheduler    thread-8  health check passed
+2026-02-14T08:08:19.284Z  [INFO ]  cache        thread-5  user alice logged in
+2026-02-14T08:08:21.694Z  [INFO ]  cache        thread-7  server started on :8080
+2026-02-14T08:08:23.943Z  [DEBUG]  auth         thread-7  parsed config: timeout=30s
+2026-02-14T08:08:24.648Z  [INFO ]  http         thread-3  processed 1000 records
+2026-02-14T08:08:24.775Z  [DEBUG]  auth         thread-7  cache miss for key user:123
+2026-02-14T08:08:24.958Z  [INFO ]  http         thread-7  backup completed in 3.2s
+2026-02-14T08:08:27.225Z  [INFO ]  cache        thread-1  processed 1000 records
+2026-02-14T08:08:28.103Z  [INFO ]  api          thread-4  processed 1000 records
+2026-02-14T08:08:29.387Z  [WARN ]  auth         thread-7  deprecated API endpoint called
+2026-02-14T08:08:30.129Z  [INFO ]  http         thread-1  server started on :8080
+2026-02-14T08:08:32.195Z  [INFO ]  config       thread-4  processed 1000 records
+2026-02-14T08:08:33.261Z  [INFO ]  grpc         thread-7  user alice logged in
+2026-02-14T08:08:34.313Z  [INFO ]  config       thread-4  backup completed in 3.2s
+2026-02-14T08:08:36.501Z  [ERROR]  http         thread-7  timeout after 30s
+2026-02-14T08:08:37.878Z  [WARN ]  worker       thread-1  deprecated API endpoint called
+2026-02-14T08:08:38.637Z  [INFO ]  grpc         thread-3  user alice logged in
+2026-02-14T08:08:38.933Z  [WARN ]  db           thread-8  memory usage at 78%
+2026-02-14T08:08:39.505Z  [INFO ]  api          thread-1  user alice logged in
+2026-02-14T08:08:41.051Z  [TRACE]  worker       thread-6  raw bytes: 0xdeadbeef
+2026-02-14T08:08:41.710Z  [DEBUG]  cache        thread-6  retry attempt 1/3
+2026-02-14T08:08:42.953Z  [INFO ]  grpc         thread-1  user alice logged in
+2026-02-14T08:08:44.323Z  [ERROR]  metrics      thread-1  connection refused to postgres:5432
+2026-02-14T08:08:45.563Z  [WARN ]  config       thread-5  memory usage at 78%
+2026-02-14T08:08:47.104Z  [INFO ]  http         thread-4  processed 1000 records
+2026-02-14T08:08:48.336Z  [INFO ]  api          thread-7  user alice logged in
+2026-02-14T08:08:48.943Z  [INFO ]  metrics      thread-6  health check passed
+2026-02-14T08:08:51.002Z  [INFO ]  api          thread-3  health check passed
+2026-02-14T08:08:53.060Z  [ERROR]  worker       thread-8  token validation failed
+2026-02-14T08:08:54.784Z  [INFO ]  auth         thread-2  user alice logged in
+2026-02-14T08:08:56.109Z  [INFO ]  worker       thread-6  processed 1000 records
+2026-02-14T08:08:58.585Z  [INFO ]  cache        thread-3  server started on :8080
+2026-02-14T08:09:00.090Z  [INFO ]  api          thread-4  user alice logged in
+2026-02-14T08:09:01.935Z  [INFO ]  cache        thread-8  user alice logged in
+2026-02-14T08:09:03.554Z  [INFO ]  config       thread-1  server started on :8080
+2026-02-14T08:09:05.305Z  [INFO ]  grpc         thread-7  server started on :8080
+2026-02-14T08:09:06.492Z  [INFO ]  metrics      thread-8  server started on :8080
+2026-02-14T08:09:07.146Z  [INFO ]  db           thread-2  backup completed in 3.2s
+2026-02-14T08:09:07.819Z  [INFO ]  http         thread-7  processed 1000 records
+2026-02-14T08:09:08.082Z  [INFO ]  worker       thread-3  user alice logged in
+2026-02-14T08:09:09.631Z  [INFO ]  api          thread-8  backup completed in 3.2s
+2026-02-14T08:09:11.708Z  [ERROR]  api          thread-1  failed to write file: disk full
+2026-02-14T08:09:12.276Z  [WARN ]  worker       thread-3  queue depth: 9500
+2026-02-14T08:09:13.643Z  [INFO ]  api          thread-6  processed 1000 records
+2026-02-14T08:09:14.357Z  [INFO ]  config       thread-8  processed 1000 records
+2026-02-14T08:09:15.138Z  [ERROR]  cache        thread-4  failed to write file: disk full
+2026-02-14T08:09:17.080Z  [INFO ]  grpc         thread-7  processed 1000 records
+2026-02-14T08:09:19.475Z  [ERROR]  api          thread-4  timeout after 30s
+2026-02-14T08:09:21.908Z  [INFO ]  worker       thread-3  backup completed in 3.2s
+2026-02-14T08:09:22.074Z  [INFO ]  metrics      thread-7  health check passed
+2026-02-14T08:09:22.920Z  [INFO ]  api          thread-4  server started on :8080
+2026-02-14T08:09:24.110Z  [INFO ]  http         thread-6  server started on :8080
+2026-02-14T08:09:26.584Z  [DEBUG]  scheduler    thread-4  retry attempt 1/3
+2026-02-14T08:09:27.999Z  [ERROR]  cache        thread-2  connection refused to postgres:5432
+2026-02-14T08:09:28.819Z  [INFO ]  cache        thread-3  processed 1000 records
+2026-02-14T08:09:31.248Z  [INFO ]  cache        thread-2  processed 1000 records
+2026-02-14T08:09:33.469Z  [INFO ]  cache        thread-4  health check passed
+2026-02-14T08:09:35.840Z  [DEBUG]  grpc         thread-6  parsed config: timeout=30s
+2026-02-14T08:09:36.204Z  [ERROR]  worker       thread-3  failed to write file: disk full
+2026-02-14T08:09:36.659Z  [INFO ]  grpc         thread-2  processed 1000 records
+2026-02-14T08:09:37.873Z  [INFO ]  api          thread-1  processed 1000 records
+2026-02-14T08:09:39.762Z  [ERROR]  db           thread-6  timeout after 30s
+2026-02-14T08:09:40.803Z  [ERROR]  api          thread-1  token validation failed
+2026-02-14T08:09:43.009Z  [INFO ]  db           thread-1  backup completed in 3.2s
+2026-02-14T08:09:44.814Z  [DEBUG]  metrics      thread-7  retry attempt 1/3
+2026-02-14T08:09:45.796Z  [ERROR]  auth         thread-1  failed to write file: disk full
+2026-02-14T08:09:46.595Z  [INFO ]  http         thread-4  server started on :8080
+2026-02-14T08:09:46.809Z  [DEBUG]  config       thread-8  connection pool size: 8
+2026-02-14T08:09:47.515Z  [INFO ]  db           thread-5  health check passed
+2026-02-14T08:09:49.189Z  [INFO ]  config       thread-5  backup completed in 3.2s
+2026-02-14T08:09:51.265Z  [INFO ]  scheduler    thread-4  user alice logged in
+2026-02-14T08:09:52.323Z  [INFO ]  http         thread-8  server started on :8080
+2026-02-14T08:09:54.322Z  [INFO ]  db           thread-6  health check passed
+2026-02-14T08:09:54.551Z  [INFO ]  worker       thread-8  backup completed in 3.2s
+2026-02-14T08:09:54.676Z  [INFO ]  grpc         thread-8  user alice logged in
+2026-02-14T08:09:56.491Z  [INFO ]  db           thread-7  user alice logged in
+2026-02-14T08:09:56.834Z  [DEBUG]  cache        thread-6  connection pool size: 8
+2026-02-14T08:09:58.494Z  [WARN ]  http         thread-5  memory usage at 78%
+2026-02-14T08:09:58.723Z  [WARN ]  cache        thread-5  deprecated API endpoint called
+2026-02-14T08:10:00.249Z  [ERROR]  cache        thread-6  panic: nil pointer dereference
+2026-02-14T08:10:02.447Z  [WARN ]  db           thread-2  deprecated API endpoint called
+2026-02-14T08:10:03.028Z  [TRACE]  http         thread-1  entering function process_request
+2026-02-14T08:10:05.134Z  [INFO ]  cache        thread-1  backup completed in 3.2s
+2026-02-14T08:10:07.240Z  [WARN ]  auth         thread-5  memory usage at 78%
+2026-02-14T08:10:08.664Z  [INFO ]  db           thread-7  processed 1000 records
+2026-02-14T08:10:10.547Z  [WARN ]  db           thread-6  memory usage at 78%
+2026-02-14T08:10:12.241Z  [INFO ]  metrics      thread-7  health check passed
+2026-02-14T08:10:12.841Z  [INFO ]  config       thread-8  backup completed in 3.2s
+2026-02-14T08:10:14.499Z  [DEBUG]  worker       thread-8  retry attempt 1/3
+2026-02-14T08:10:15.196Z  [DEBUG]  metrics      thread-7  connection pool size: 8
+2026-02-14T08:10:16.221Z  [INFO ]  http         thread-1  user alice logged in
+2026-02-14T08:10:18.131Z  [ERROR]  grpc         thread-3  connection refused to postgres:5432
+2026-02-14T08:10:20.047Z  [DEBUG]  worker       thread-1  parsed config: timeout=30s
+2026-02-14T08:10:21.655Z  [INFO ]  auth         thread-6  backup completed in 3.2s
+2026-02-14T08:10:23.805Z  [INFO ]  auth         thread-6  server started on :8080
+2026-02-14T08:10:25.497Z  [DEBUG]  cache        thread-6  connection pool size: 8
+2026-02-14T08:10:25.928Z  [INFO ]  http         thread-8  user alice logged in
+2026-02-14T08:10:28.227Z  [ERROR]  metrics      thread-8  token validation failed
+2026-02-14T08:10:29.102Z  [INFO ]  grpc         thread-4  processed 1000 records
+2026-02-14T08:10:30.051Z  [INFO ]  api          thread-7  health check passed
+2026-02-14T08:10:30.838Z  [DEBUG]  config       thread-7  connection pool size: 8
+2026-02-14T08:10:32.126Z  [INFO ]  grpc         thread-5  backup completed in 3.2s
+2026-02-14T08:10:34.334Z  [INFO ]  db           thread-2  backup completed in 3.2s
+2026-02-14T08:10:35.953Z  [WARN ]  grpc         thread-3  slow query detected (>500ms)
+2026-02-14T08:10:37.271Z  [INFO ]  worker       thread-1  health check passed
+2026-02-14T08:10:38.885Z  [INFO ]  metrics      thread-5  user alice logged in
+2026-02-14T08:10:39.625Z  [INFO ]  http         thread-1  processed 1000 records
+2026-02-14T08:10:41.515Z  [WARN ]  scheduler    thread-1  memory usage at 78%
+2026-02-14T08:10:43.065Z  [WARN ]  http         thread-1  deprecated API endpoint called
+2026-02-14T08:10:43.544Z  [INFO ]  api          thread-3  backup completed in 3.2s
+2026-02-14T08:10:45.440Z  [INFO ]  api          thread-1  server started on :8080
+2026-02-14T08:10:46.001Z  [ERROR]  grpc         thread-2  connection refused to postgres:5432
+2026-02-14T08:10:48.301Z  [WARN ]  api          thread-5  queue depth: 9500
