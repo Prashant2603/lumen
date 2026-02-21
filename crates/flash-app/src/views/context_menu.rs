@@ -22,7 +22,7 @@ pub fn view<'a>(
             text(format!("Copy  (line {})", line_num + 1)).size(13).color(fg),
         ]
     )
-    .on_press(Message::CopyContextLine)
+    .on_press(Message::CopyLine(line_num))
     .padding([8, 16])
     .width(Length::Fill)
     .style(move |_: &iced::Theme, status| button::Style {

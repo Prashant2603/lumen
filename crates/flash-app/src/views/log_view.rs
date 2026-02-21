@@ -28,6 +28,7 @@ pub fn view<'a>(
     pipeline_stale:      bool,
     pipeline_preview_to: Option<u64>,
     color_log_levels:    bool,
+    h_scroll_offset:     usize,
     p:                   Palette,
 ) -> Element<'a, Message> {
     if reader.is_none() || total_lines == 0 {
@@ -105,6 +106,21 @@ pub fn view<'a>(
             raw.to_string()
         }
     }).collect();
+
+    // Apply horizontal character offset (non-wrap mode only)
+    let display_strings: Vec<String> = if !line_wrap && h_scroll_offset > 0 {
+        display_strings.into_iter().map(|s| {
+            // Skip h_scroll_offset characters (unicode-safe)
+            s.chars().skip(h_scroll_offset).collect()
+        }).collect()
+    } else {
+        display_strings
+    };
+
+    // Compute max visible line length for the scrollbar thumb
+    let max_visible_len: usize = if !line_wrap {
+        display_strings.iter().map(|s| s.chars().count()).max().unwrap_or(0) + h_scroll_offset
+    } else { 0 };
 
     let total_for_digits = total_lines;
     let line_num_chars   = format!("{}", total_for_digits).len();
@@ -284,7 +300,8 @@ pub fn view<'a>(
             None
         };
 
-        let alt_row_bg: Option<Color> = if src % 2 == 1 { Some(p.bg_alt_row) } else { None };
+        // Use view-row index (not src) so stripes always alternate visually after filtering
+        let alt_row_bg: Option<Color> = if (scroll_offset + idx) % 2 == 1 { Some(p.bg_alt_row) } else { None };
 
         let row_bg = if is_selected {
             Some(p.selected_line)
@@ -408,7 +425,7 @@ pub fn view<'a>(
     } else if pipeline_preview_to.is_some() {
         let visible = view_rows.map(|r| r.len()).unwrap_or(total_lines);
         format!(
-            "PREVIEW  Lines {}-{} of {}  ({:.0}%)  —  click [>] on a layer to change preview, or [>] on again to exit",
+            "PREVIEW  Lines {}-{} of {}  ({:.0}%)  —  click ▶ on a layer to change preview, or ▶ again to exit",
             scroll_offset + 1,
             (scroll_offset + viewport_lines).min(visible),
             visible,
@@ -461,7 +478,53 @@ pub fn view<'a>(
     );
     let main_area = row![content_area, minimap].height(Length::Fill);
 
-    column![main_area, status_bar].into()
+    // ── Horizontal scrollbar (non-wrap mode, when content is wider than viewport) ──
+    let h_scrollbar: Option<Element<'a, Message>> = if !line_wrap && max_visible_len > 60 {
+        let sbg2    = p.bg_secondary;
+        let sbdr2   = p.border;
+        let thumb_c = p.fg_muted;
+
+        // Thumb represents the visible window (assume ~80 chars visible at default font)
+        let visible_chars: f32 = 80.0;
+        let total_chars = max_visible_len.max(80) as f32;
+        let thumb_frac  = (visible_chars / total_chars).min(1.0);
+        let pos_frac    = (h_scroll_offset as f32 / total_chars).min(1.0 - thumb_frac);
+
+        let track = container(
+            container(text("").size(1))
+                .height(Length::Fixed(4.0))
+                .width(Length::FillPortion((thumb_frac * 1000.0) as u16))
+                .style(move |_: &iced::Theme| container::Style {
+                    background: Some(Color { a: 0.7, ..thumb_c }.into()),
+                    border: iced::Border { radius: 2.0.into(), ..Default::default() },
+                    ..Default::default()
+                }),
+        )
+        .width(Length::Fill)
+        .padding(iced::Padding {
+            left:   pos_frac * 1000.0,  // approximation
+            top:    3.0,
+            right:  0.0,
+            bottom: 3.0,
+        });
+
+        let bar = container(track)
+            .width(Length::Fill)
+            .height(Length::Fixed(10.0))
+            .style(move |_: &iced::Theme| container::Style {
+                background: Some(sbg2.into()),
+                border: iced::Border { color: sbdr2, width: 1.0, radius: 0.0.into() },
+                ..Default::default()
+            });
+
+        Some(bar.into())
+    } else {
+        None
+    };
+
+    let mut col = column![main_area];
+    if let Some(hbar) = h_scrollbar { col = col.push(hbar); }
+    col.push(status_bar).into()
 }
 
 // ── Stale ghosting helper ─────────────────────────────────────────────────────

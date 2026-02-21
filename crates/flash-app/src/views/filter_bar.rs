@@ -185,7 +185,7 @@ pub fn view<'a>(
     if has_recent {
         let rec_fg  = if recent_open { acc } else { fgm };
         let rec_bg  = if recent_open { Color { a: 0.15, ..acc } } else { Color::TRANSPARENT };
-        let rec_bdr = if recent_open { Color { a: 0.50, ..acc } } else { Color::TRANSPARENT };
+        let rec_bdr = if recent_open { Color { a: 0.50, ..acc } } else { Color { a: 0.35, ..bdr } };
         bar = bar.push(
             button(text("Recent").size(12).color(rec_fg))
                 .on_press(Message::ToggleRecentFiles)

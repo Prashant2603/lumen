@@ -93,6 +93,7 @@ pub struct Tab {
     pub jump_source_line:      Option<usize>,
     pub pipeline_preview_to:   Option<u64>,   // layer id up to which we preview
     pub filter_regex:          Option<regex::Regex>, // compiled filter regex (when regex mode on)
+    pub h_scroll_offset:       usize,         // horizontal char offset (non-wrap mode)
 }
 
 impl Tab {
@@ -152,8 +153,11 @@ impl Tab {
         let total = self.open_file.line_index.line_count();
         // Clone context_expanded to avoid borrow conflict when writing view_rows
         let context_expanded = self.context_expanded.clone();
-        self.view_rows    = Self::expand_with_context(&post_quick, &context_expanded, total);
-        self.scroll_offset = 0;
+        self.view_rows = Self::expand_with_context(&post_quick, &context_expanded, total);
+        // Only snap to top if the current position is now out of bounds
+        if self.scroll_offset >= self.view_rows.len().max(1) {
+            self.scroll_offset = 0;
+        }
     }
 
     fn expand_with_context(
@@ -336,10 +340,12 @@ pub enum Message {
     UpdateProcStats,
     // Recent files panel
     ToggleRecentFiles,
+    // Horizontal scroll (non-wrap mode, Shift+wheel)
+    HScrollBy(i64),
     // Right-click context menu
     RightClickLine(usize),
     CloseContextMenu,
-    CopyContextLine,
+    CopyLine(usize),   // carries line index directly — immune to race with CloseContextMenu
     // Pipeline
     TogglePipeline,
     PipelinePreviewLayer(Option<u64>),  // None = clear preview
@@ -506,6 +512,7 @@ impl App {
 
         let mut cmds = vec![
             PaletteCmd { label: "Open File".into(),          shortcut: "Ctrl+O", action: Message::FileOpen },
+            PaletteCmd { label: "Reload File".into(),        shortcut: "F5",     action: Message::ReloadActiveFile },
             PaletteCmd { label: "Jump to Line".into(),       shortcut: "Ctrl+G", action: Message::JumpOpen },
             PaletteCmd { label: "Toggle Settings".into(),    shortcut: "",       action: Message::ToggleSettings },
             PaletteCmd { label: "Toggle Info Panel".into(),  shortcut: "",       action: Message::ToggleInfoPanel },
@@ -687,9 +694,15 @@ impl App {
                 return self.update(Message::ScrollTo(total));
             }
             Message::MouseScrolled(delta) => {
+                // Any scroll dismisses the right-click context menu
+                self.context_menu_line = None;
                 if self.modifiers.control() {
                     if delta > 0.0 { return self.update(Message::ZoomIn); }
                     else if delta < 0.0 { return self.update(Message::ZoomOut); }
+                } else if self.modifiers.shift() && !self.line_wrap {
+                    // Shift+wheel = horizontal scroll (6 chars per notch)
+                    let chars = (delta * 6.0).round() as i64;
+                    if chars != 0 { return self.update(Message::HScrollBy(-chars)); }
                 } else {
                     let lines = (delta * 3.0).round() as i64;
                     if lines != 0 { return self.update(Message::ScrollBy(-lines)); }
@@ -829,6 +842,9 @@ impl App {
                     if modifiers.shift() { return self.update(Message::PrevBookmark); }
                     return self.update(Message::NextBookmark);
                 }
+                Key::Named(keyboard::key::Named::F5) => {
+                    if !self.tabs.is_empty() { return self.update(Message::ReloadActiveFile); }
+                }
                 Key::Named(keyboard::key::Named::Escape) => {
                     if self.palette_open {
                         self.palette_open = false; self.palette_query.clear(); self.palette_selected = 0;
@@ -858,6 +874,11 @@ impl App {
                     "p"       => return self.update(Message::PaletteOpen),
                     "g"       => return self.update(Message::JumpOpen),
                     "o"       => return self.update(Message::FileOpen),
+                    "r"       => {
+                        if !self.recent_files.is_empty() {
+                            return self.update(Message::ToggleRecentFiles);
+                        }
+                    }
                     _         => {}
                 },
                 _ => {}
@@ -931,7 +952,19 @@ impl App {
             Message::SetTheme(t)     => { self.app_theme = t; }
             Message::ToggleSettings  => { self.settings_open = !self.settings_open; }
             Message::ToggleInfoPanel => { self.info_panel_open = !self.info_panel_open; }
-            Message::WrapToggle          => { self.line_wrap = !self.line_wrap; self.recalc_viewport(); }
+            Message::WrapToggle => {
+                self.line_wrap = !self.line_wrap;
+                // Reset horizontal scroll when toggling wrap
+                if let Some(t) = self.tab_mut() { t.h_scroll_offset = 0; }
+                self.recalc_viewport();
+            }
+            Message::HScrollBy(delta) => {
+                if !self.line_wrap {
+                    if let Some(t) = self.tab_mut() {
+                        t.h_scroll_offset = (t.h_scroll_offset as i64 + delta).max(0) as usize;
+                    }
+                }
+            }
             Message::ToggleColorLogLevels => { self.color_log_levels = !self.color_log_levels; }
 
             // ── Line selection ────────────────────────────────────────────────
@@ -1352,23 +1385,19 @@ impl App {
                 self.context_menu_line = if self.context_menu_line == Some(n) { None } else { Some(n) };
             }
             Message::CloseContextMenu => { self.context_menu_line = None; }
-            Message::CopyContextLine => {
-                // Collect text before clearing the borrow on self
-                let text_to_copy: Option<String> = {
-                    let n = self.context_menu_line;
-                    n.and_then(|n| {
-                        self.tab().and_then(|tab| {
-                            let reader = LineReader::new(
-                                tab.file_data_arc.as_ref().as_ref(),
-                                &tab.open_file.line_index,
-                            );
-                            reader.get_line(n).map(|s| s.to_string())
-                        })
-                    })
-                };
+            Message::CopyLine(n) => {
+                // Line index carried in the message — no dependency on context_menu_line
                 self.context_menu_line = None;
-                if let Some(text) = text_to_copy {
-                    return iced::clipboard::write(text);
+                if let Some(tab) = self.tab() {
+                    let reader = LineReader::new(
+                        tab.file_data_arc.as_ref().as_ref(),
+                        &tab.open_file.line_index,
+                    );
+                    if let Some(raw) = reader.get_line(n) {
+                        // Apply pipeline transforms so what's copied matches what's displayed
+                        let display = tab.pipeline.apply_text_transforms(raw);
+                        return iced::clipboard::write(display.into_owned());
+                    }
                 }
             }
 
@@ -1456,6 +1485,7 @@ impl App {
         let empty_ctx: HashSet<usize> = HashSet::new();
         let context_expanded    = active.map(|t| &t.context_expanded).unwrap_or(&empty_ctx);
 
+        let h_scroll_offset = active.map(|t| t.h_scroll_offset).unwrap_or(0);
         let log_view = views::log_view::view(
             reader, scroll_offset, self.viewport_lines, total_visible,
             compiled_regex, search_result_set,
@@ -1467,6 +1497,7 @@ impl App {
             pipeline_stale,
             pipeline_preview_to,
             self.color_log_levels,
+            h_scroll_offset,
             p,
         );
 
@@ -1607,8 +1638,10 @@ impl App {
             subs.push(iced::time::every(std::time::Duration::from_millis(500)).map(|_| Message::PollFileChange));
         }
 
-        // Process stats — refresh every 2 seconds
-        subs.push(iced::time::every(std::time::Duration::from_secs(2)).map(|_| Message::UpdateProcStats));
+        // Process stats — refresh every 2 seconds, only when the info panel is visible
+        if self.info_panel_open && !self.tabs.is_empty() {
+            subs.push(iced::time::every(std::time::Duration::from_secs(2)).map(|_| Message::UpdateProcStats));
+        }
 
         Subscription::batch(subs)
     }
@@ -1685,6 +1718,7 @@ fn build_tab(path: PathBuf, gz_data: Option<Vec<u8>>) -> Option<Tab> {
         jump_source_line:      None,
         pipeline_preview_to:   None,
         filter_regex:          None,
+        h_scroll_offset:       0,
     })
 }
 

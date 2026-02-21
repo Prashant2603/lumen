@@ -1,500 +1,257 @@
-2026-02-14T08:00:00.000Z  [DEBUG]  scheduler    thread-8  connection pool size: 8
-2026-02-14T08:00:00.148Z  [WARN ]  db           thread-2  memory usage at 78%
-2026-02-14T08:00:01.580Z  [INFO ]  http         thread-1  processed 1000 records
-2026-02-14T08:00:01.890Z  [INFO ]  auth         thread-6  health check passed
-2026-02-14T08:00:03.421Z  [ERROR]  db           thread-4  failed to write file: disk full
-2026-02-14T08:00:05.578Z  [DEBUG]  worker       thread-5  parsed config: timeout=30s
-2026-02-14T08:00:07.392Z  [ERROR]  grpc         thread-1  token validation failed
-2026-02-14T08:00:08.948Z  [DEBUG]  db           thread-2  query took 12ms
-2026-02-14T08:00:09.088Z  [WARN ]  config       thread-3  cert expires in 7 days
-2026-02-14T08:00:09.990Z  [TRACE]  api          thread-3  poll returned Pending
-2026-02-14T08:00:10.590Z  [TRACE]  cache        thread-2  entering function process_request
-2026-02-14T08:00:12.322Z  [INFO ]  auth         thread-3  backup completed in 3.2s
-2026-02-14T08:00:12.531Z  [WARN ]  worker       thread-1  memory usage at 78%
-2026-02-14T08:00:14.102Z  [INFO ]  config       thread-3  backup completed in 3.2s
-2026-02-14T08:00:14.977Z  [INFO ]  db           thread-1  processed 1000 records
-2026-02-14T08:00:17.075Z  [DEBUG]  auth         thread-5  parsed config: timeout=30s
-2026-02-14T08:00:17.330Z  [INFO ]  api          thread-5  user alice logged in
-2026-02-14T08:00:19.753Z  [INFO ]  metrics      thread-7  server started on :8080
-2026-02-14T08:00:21.799Z  [INFO ]  auth         thread-4  backup completed in 3.2s
-2026-02-14T08:00:22.200Z  [ERROR]  db           thread-8  token validation failed
-2026-02-14T08:00:23.228Z  [ERROR]  http         thread-8  timeout after 30s
-2026-02-14T08:00:23.622Z  [INFO ]  scheduler    thread-8  user alice logged in
-2026-02-14T08:00:25.713Z  [INFO ]  http         thread-6  server started on :8080
-2026-02-14T08:00:26.815Z  [TRACE]  metrics      thread-2  stack frame depth: 4
-2026-02-14T08:00:28.208Z  [TRACE]  worker       thread-7  raw bytes: 0xdeadbeef
-2026-02-14T08:00:29.189Z  [INFO ]  grpc         thread-8  server started on :8080
-2026-02-14T08:00:30.819Z  [WARN ]  grpc         thread-7  deprecated API endpoint called
-2026-02-14T08:00:31.335Z  [INFO ]  grpc         thread-4  health check passed
-2026-02-14T08:00:32.384Z  [INFO ]  grpc         thread-2  health check passed
-2026-02-14T08:00:34.317Z  [INFO ]  cache        thread-3  user alice logged in
-2026-02-14T08:00:34.830Z  [DEBUG]  metrics      thread-8  parsed config: timeout=30s
-2026-02-14T08:00:35.307Z  [INFO ]  http         thread-2  processed 1000 records
-2026-02-14T08:00:36.365Z  [WARN ]  api          thread-6  cert expires in 7 days
-2026-02-14T08:00:36.475Z  [INFO ]  api          thread-8  server started on :8080
-2026-02-14T08:00:36.964Z  [WARN ]  db           thread-5  queue depth: 9500
-2026-02-14T08:00:37.991Z  [INFO ]  auth         thread-4  processed 1000 records
-2026-02-14T08:00:38.698Z  [INFO ]  scheduler    thread-6  health check passed
-2026-02-14T08:00:40.679Z  [INFO ]  worker       thread-1  server started on :8080
-2026-02-14T08:00:41.922Z  [DEBUG]  worker       thread-8  parsed config: timeout=30s
-2026-02-14T08:00:43.732Z  [INFO ]  api          thread-7  processed 1000 records
-2026-02-14T08:00:44.857Z  [INFO ]  http         thread-6  processed 1000 records
-2026-02-14T08:00:46.344Z  [INFO ]  worker       thread-6  server started on :8080
-2026-02-14T08:00:46.937Z  [TRACE]  metrics      thread-7  lock acquired on mutex
-2026-02-14T08:00:48.296Z  [DEBUG]  http         thread-8  cache miss for key user:123
-2026-02-14T08:00:49.844Z  [DEBUG]  auth         thread-3  connection pool size: 8
-2026-02-14T08:00:50.586Z  [WARN ]  http         thread-2  slow query detected (>500ms)
-2026-02-14T08:00:53.013Z  [INFO ]  worker       thread-1  user alice logged in
-2026-02-14T08:00:53.861Z  [INFO ]  http         thread-7  user alice logged in
-2026-02-14T08:00:54.189Z  [WARN ]  api          thread-8  memory usage at 78%
-2026-02-14T08:00:55.185Z  [INFO ]  db           thread-3  processed 1000 records
-2026-02-14T08:00:55.710Z  [DEBUG]  grpc         thread-1  cache miss for key user:123
-2026-02-14T08:00:56.130Z  [DEBUG]  scheduler    thread-4  retry attempt 1/3
-2026-02-14T08:00:57.630Z  [WARN ]  http         thread-3  memory usage at 78%
-2026-02-14T08:00:59.501Z  [WARN ]  metrics      thread-7  cert expires in 7 days
-2026-02-14T08:01:00.136Z  [TRACE]  api          thread-2  entering function process_request
-2026-02-14T08:01:00.284Z  [DEBUG]  auth         thread-8  parsed config: timeout=30s
-2026-02-14T08:01:02.350Z  [INFO ]  config       thread-7  backup completed in 3.2s
-2026-02-14T08:01:03.750Z  [INFO ]  grpc         thread-6  server started on :8080
-2026-02-14T08:01:05.834Z  [INFO ]  config       thread-8  health check passed
-2026-02-14T08:01:08.105Z  [INFO ]  api          thread-1  user alice logged in
-2026-02-14T08:01:09.978Z  [DEBUG]  auth         thread-6  retry attempt 1/3
-2026-02-14T08:01:10.631Z  [DEBUG]  api          thread-1  connection pool size: 8
-2026-02-14T08:01:13.057Z  [ERROR]  metrics      thread-2  panic: nil pointer dereference
-2026-02-14T08:01:15.515Z  [WARN ]  db           thread-4  queue depth: 9500
-2026-02-14T08:01:17.235Z  [DEBUG]  db           thread-2  retry attempt 1/3
-2026-02-14T08:01:19.523Z  [WARN ]  metrics      thread-7  slow query detected (>500ms)
-2026-02-14T08:01:20.434Z  [DEBUG]  grpc         thread-4  query took 12ms
-2026-02-14T08:01:20.799Z  [INFO ]  auth         thread-5  server started on :8080
-2026-02-14T08:01:21.984Z  [WARN ]  db           thread-1  cert expires in 7 days
-2026-02-14T08:01:23.711Z  [ERROR]  auth         thread-1  token validation failed
-2026-02-14T08:01:25.707Z  [WARN ]  metrics      thread-7  cert expires in 7 days
-2026-02-14T08:01:27.179Z  [ERROR]  db           thread-6  connection refused to postgres:5432
-2026-02-14T08:01:29.001Z  [DEBUG]  db           thread-5  connection pool size: 8
-2026-02-14T08:01:30.409Z  [ERROR]  grpc         thread-1  connection refused to postgres:5432
-2026-02-14T08:01:31.927Z  [WARN ]  config       thread-2  slow query detected (>500ms)
-2026-02-14T08:01:32.167Z  [ERROR]  api          thread-3  connection refused to postgres:5432
-2026-02-14T08:01:33.618Z  [WARN ]  cache        thread-5  deprecated API endpoint called
-2026-02-14T08:01:34.524Z  [DEBUG]  metrics      thread-7  retry attempt 1/3
-2026-02-14T08:01:34.624Z  [INFO ]  api          thread-3  processed 1000 records
-2026-02-14T08:01:37.043Z  [TRACE]  worker       thread-8  raw bytes: 0xdeadbeef
-2026-02-14T08:01:38.023Z  [INFO ]  cache        thread-2  health check passed
-2026-02-14T08:01:39.737Z  [INFO ]  config       thread-3  server started on :8080
-2026-02-14T08:01:40.500Z  [ERROR]  metrics      thread-2  token validation failed
-2026-02-14T08:01:41.027Z  [ERROR]  cache        thread-5  panic: nil pointer dereference
-2026-02-14T08:01:42.252Z  [ERROR]  scheduler    thread-1  connection refused to postgres:5432
-2026-02-14T08:01:42.874Z  [DEBUG]  scheduler    thread-8  connection pool size: 8
-2026-02-14T08:01:45.252Z  [INFO ]  grpc         thread-7  user alice logged in
-2026-02-14T08:01:46.978Z  [INFO ]  api          thread-4  user alice logged in
-2026-02-14T08:01:48.431Z  [INFO ]  cache        thread-6  health check passed
-2026-02-14T08:01:50.430Z  [INFO ]  db           thread-1  server started on :8080
-2026-02-14T08:01:52.487Z  [INFO ]  scheduler    thread-7  user alice logged in
-2026-02-14T08:01:53.464Z  [INFO ]  grpc         thread-2  user alice logged in
-2026-02-14T08:01:55.795Z  [ERROR]  http         thread-3  panic: nil pointer dereference
-2026-02-14T08:01:57.185Z  [WARN ]  config       thread-5  slow query detected (>500ms)
-2026-02-14T08:01:58.669Z  [DEBUG]  db           thread-5  connection pool size: 8
-2026-02-14T08:01:59.511Z  [DEBUG]  auth         thread-4  connection pool size: 8
-2026-02-14T08:02:00.969Z  [DEBUG]  scheduler    thread-6  cache miss for key user:123
-2026-02-14T08:02:02.582Z  [INFO ]  db           thread-2  health check passed
-2026-02-14T08:02:04.643Z  [INFO ]  grpc         thread-2  processed 1000 records
-2026-02-14T08:02:06.091Z  [INFO ]  api          thread-3  server started on :8080
-2026-02-14T08:02:06.940Z  [INFO ]  config       thread-3  processed 1000 records
-2026-02-14T08:02:09.268Z  [INFO ]  grpc         thread-5  health check passed
-2026-02-14T08:02:11.451Z  [INFO ]  http         thread-5  server started on :8080
-2026-02-14T08:02:13.167Z  [TRACE]  cache        thread-5  raw bytes: 0xdeadbeef
-2026-02-14T08:02:14.692Z  [INFO ]  auth         thread-6  health check passed
-2026-02-14T08:02:15.688Z  [WARN ]  cache        thread-7  deprecated API endpoint called
-2026-02-14T08:02:18.021Z  [INFO ]  grpc         thread-7  server started on :8080
-2026-02-14T08:02:18.402Z  [WARN ]  worker       thread-6  queue depth: 9500
-2026-02-14T08:02:18.525Z  [INFO ]  scheduler    thread-7  server started on :8080
-2026-02-14T08:02:20.705Z  [INFO ]  http         thread-8  user alice logged in
-2026-02-14T08:02:22.078Z  [TRACE]  worker       thread-7  lock acquired on mutex
-2026-02-14T08:02:23.606Z  [DEBUG]  http         thread-3  query took 12ms
-2026-02-14T08:02:25.841Z  [INFO ]  config       thread-7  server started on :8080
-2026-02-14T08:02:26.461Z  [INFO ]  api          thread-6  health check passed
-2026-02-14T08:02:27.042Z  [INFO ]  http         thread-4  server started on :8080
-2026-02-14T08:02:28.306Z  [TRACE]  metrics      thread-8  lock acquired on mutex
-2026-02-14T08:02:30.538Z  [INFO ]  auth         thread-3  user alice logged in
-2026-02-14T08:02:30.785Z  [DEBUG]  api          thread-3  retry attempt 1/3
-2026-02-14T08:02:30.940Z  [DEBUG]  cache        thread-4  connection pool size: 8
-2026-02-14T08:02:32.157Z  [INFO ]  http         thread-5  server started on :8080
-2026-02-14T08:02:34.609Z  [INFO ]  db           thread-8  health check passed
-2026-02-14T08:02:36.594Z  [INFO ]  cache        thread-3  user alice logged in
-2026-02-14T08:02:36.785Z  [DEBUG]  cache        thread-5  connection pool size: 8
-2026-02-14T08:02:38.771Z  [INFO ]  cache        thread-2  health check passed
-2026-02-14T08:02:40.480Z  [INFO ]  grpc         thread-8  backup completed in 3.2s
-2026-02-14T08:02:41.252Z  [INFO ]  db           thread-4  processed 1000 records
-2026-02-14T08:02:42.083Z  [INFO ]  scheduler    thread-5  user alice logged in
-2026-02-14T08:02:43.302Z  [INFO ]  http         thread-4  health check passed
-2026-02-14T08:02:45.238Z  [DEBUG]  db           thread-7  parsed config: timeout=30s
-2026-02-14T08:02:47.311Z  [INFO ]  auth         thread-7  processed 1000 records
-2026-02-14T08:02:49.366Z  [INFO ]  auth         thread-2  user alice logged in
-2026-02-14T08:02:50.694Z  [DEBUG]  db           thread-8  retry attempt 1/3
-2026-02-14T08:02:52.982Z  [TRACE]  grpc         thread-3  poll returned Pending
-2026-02-14T08:02:54.804Z  [DEBUG]  worker       thread-2  cache miss for key user:123
-2026-02-14T08:02:56.114Z  [INFO ]  db           thread-1  health check passed
-2026-02-14T08:02:56.386Z  [INFO ]  auth         thread-8  backup completed in 3.2s
-2026-02-14T08:02:58.256Z  [INFO ]  metrics      thread-1  backup completed in 3.2s
-2026-02-14T08:02:59.916Z  [INFO ]  config       thread-3  health check passed
-2026-02-14T08:03:00.112Z  [ERROR]  scheduler    thread-2  token validation failed
-2026-02-14T08:03:00.674Z  [DEBUG]  worker       thread-3  cache miss for key user:123
-2026-02-14T08:03:01.690Z  [TRACE]  http         thread-3  raw bytes: 0xdeadbeef
-2026-02-14T08:03:02.244Z  [INFO ]  api          thread-1  processed 1000 records
-2026-02-14T08:03:02.959Z  [INFO ]  db           thread-8  backup completed in 3.2s
-2026-02-14T08:03:05.404Z  [WARN ]  http         thread-1  queue depth: 9500
-2026-02-14T08:03:05.650Z  [INFO ]  api          thread-1  processed 1000 records
-2026-02-14T08:03:05.914Z  [TRACE]  db           thread-6  entering function process_request
-2026-02-14T08:03:06.697Z  [INFO ]  grpc         thread-3  user alice logged in
-2026-02-14T08:03:08.244Z  [DEBUG]  http         thread-2  cache miss for key user:123
-2026-02-14T08:03:09.744Z  [INFO ]  cache        thread-6  backup completed in 3.2s
-2026-02-14T08:03:11.891Z  [INFO ]  auth         thread-6  backup completed in 3.2s
-2026-02-14T08:03:12.999Z  [DEBUG]  grpc         thread-4  query took 12ms
-2026-02-14T08:03:13.845Z  [INFO ]  db           thread-3  processed 1000 records
-2026-02-14T08:03:16.157Z  [WARN ]  grpc         thread-2  slow query detected (>500ms)
-2026-02-14T08:03:18.273Z  [INFO ]  db           thread-2  processed 1000 records
-2026-02-14T08:03:20.756Z  [DEBUG]  worker       thread-8  parsed config: timeout=30s
-2026-02-14T08:03:21.780Z  [TRACE]  scheduler    thread-7  entering function process_request
-2026-02-14T08:03:22.409Z  [INFO ]  cache        thread-5  processed 1000 records
-2026-02-14T08:03:22.879Z  [INFO ]  http         thread-6  processed 1000 records
-2026-02-14T08:03:25.048Z  [DEBUG]  auth         thread-8  cache miss for key user:123
-2026-02-14T08:03:27.038Z  [INFO ]  api          thread-6  health check passed
-2026-02-14T08:03:27.826Z  [INFO ]  metrics      thread-5  health check passed
-2026-02-14T08:03:28.756Z  [INFO ]  http         thread-4  server started on :8080
-2026-02-14T08:03:29.094Z  [DEBUG]  grpc         thread-3  retry attempt 1/3
-2026-02-14T08:03:29.201Z  [DEBUG]  http         thread-5  query took 12ms
-2026-02-14T08:03:30.982Z  [INFO ]  metrics      thread-5  backup completed in 3.2s
-2026-02-14T08:03:31.663Z  [INFO ]  config       thread-7  health check passed
-2026-02-14T08:03:33.104Z  [TRACE]  metrics      thread-7  poll returned Pending
-2026-02-14T08:03:34.080Z  [INFO ]  auth         thread-7  backup completed in 3.2s
-2026-02-14T08:03:35.697Z  [TRACE]  metrics      thread-2  entering function process_request
-2026-02-14T08:03:35.858Z  [INFO ]  scheduler    thread-6  backup completed in 3.2s
-2026-02-14T08:03:36.236Z  [INFO ]  metrics      thread-6  backup completed in 3.2s
-2026-02-14T08:03:38.108Z  [DEBUG]  config       thread-6  retry attempt 1/3
-2026-02-14T08:03:38.947Z  [INFO ]  grpc         thread-6  health check passed
-2026-02-14T08:03:40.266Z  [TRACE]  auth         thread-7  lock acquired on mutex
-2026-02-14T08:03:41.950Z  [WARN ]  scheduler    thread-7  memory usage at 78%
-2026-02-14T08:03:42.102Z  [INFO ]  worker       thread-4  server started on :8080
-2026-02-14T08:03:42.542Z  [DEBUG]  db           thread-6  cache miss for key user:123
-2026-02-14T08:03:43.952Z  [INFO ]  auth         thread-3  processed 1000 records
-2026-02-14T08:03:46.332Z  [INFO ]  scheduler    thread-5  processed 1000 records
-2026-02-14T08:03:47.482Z  [INFO ]  db           thread-5  server started on :8080
-2026-02-14T08:03:49.223Z  [INFO ]  http         thread-2  user alice logged in
-2026-02-14T08:03:51.427Z  [WARN ]  scheduler    thread-2  cert expires in 7 days
-2026-02-14T08:03:53.659Z  [INFO ]  worker       thread-1  health check passed
-2026-02-14T08:03:53.860Z  [WARN ]  worker       thread-1  queue depth: 9500
-2026-02-14T08:03:55.214Z  [INFO ]  db           thread-6  health check passed
-2026-02-14T08:03:56.832Z  [TRACE]  scheduler    thread-5  raw bytes: 0xdeadbeef
-2026-02-14T08:03:57.218Z  [WARN ]  scheduler    thread-6  deprecated API endpoint called
-2026-02-14T08:03:58.470Z  [DEBUG]  auth         thread-5  cache miss for key user:123
-2026-02-14T08:03:59.990Z  [WARN ]  metrics      thread-8  deprecated API endpoint called
-2026-02-14T08:04:00.646Z  [INFO ]  api          thread-2  health check passed
-2026-02-14T08:04:02.279Z  [INFO ]  cache        thread-5  processed 1000 records
-2026-02-14T08:04:04.513Z  [DEBUG]  http         thread-6  cache miss for key user:123
-2026-02-14T08:04:04.706Z  [INFO ]  grpc         thread-5  server started on :8080
-2026-02-14T08:04:06.669Z  [INFO ]  api          thread-5  server started on :8080
-2026-02-14T08:04:07.494Z  [WARN ]  grpc         thread-7  memory usage at 78%
-2026-02-14T08:04:09.901Z  [WARN ]  worker       thread-1  cert expires in 7 days
-2026-02-14T08:04:11.793Z  [INFO ]  config       thread-6  processed 1000 records
-2026-02-14T08:04:12.115Z  [WARN ]  config       thread-2  deprecated API endpoint called
-2026-02-14T08:04:12.761Z  [ERROR]  metrics      thread-3  token validation failed
-2026-02-14T08:04:14.293Z  [WARN ]  api          thread-7  deprecated API endpoint called
-2026-02-14T08:04:14.485Z  [DEBUG]  scheduler    thread-6  retry attempt 1/3
-2026-02-14T08:04:15.044Z  [WARN ]  http         thread-1  queue depth: 9500
-2026-02-14T08:04:15.245Z  [DEBUG]  scheduler    thread-3  parsed config: timeout=30s
-2026-02-14T08:04:17.661Z  [DEBUG]  config       thread-8  connection pool size: 8
-2026-02-14T08:04:19.410Z  [INFO ]  worker       thread-6  user alice logged in
-2026-02-14T08:04:21.085Z  [INFO ]  http         thread-7  processed 1000 records
-2026-02-14T08:04:22.125Z  [DEBUG]  worker       thread-4  connection pool size: 8
-2026-02-14T08:04:22.668Z  [INFO ]  cache        thread-7  user alice logged in
-2026-02-14T08:04:25.052Z  [INFO ]  scheduler    thread-2  health check passed
-2026-02-14T08:04:26.601Z  [INFO ]  metrics      thread-5  health check passed
-2026-02-14T08:04:28.423Z  [TRACE]  cache        thread-6  raw bytes: 0xdeadbeef
-2026-02-14T08:04:29.632Z  [INFO ]  http         thread-2  health check passed
-2026-02-14T08:04:31.125Z  [INFO ]  db           thread-8  server started on :8080
-2026-02-14T08:04:31.873Z  [INFO ]  cache        thread-8  user alice logged in
-2026-02-14T08:04:33.917Z  [INFO ]  metrics      thread-7  server started on :8080
-2026-02-14T08:04:34.302Z  [ERROR]  db           thread-4  connection refused to postgres:5432
-2026-02-14T08:04:34.972Z  [INFO ]  db           thread-3  backup completed in 3.2s
-2026-02-14T08:04:36.249Z  [WARN ]  grpc         thread-3  cert expires in 7 days
-2026-02-14T08:04:38.640Z  [INFO ]  api          thread-1  user alice logged in
-2026-02-14T08:04:39.103Z  [ERROR]  http         thread-7  timeout after 30s
-2026-02-14T08:04:41.308Z  [TRACE]  db           thread-2  lock acquired on mutex
-2026-02-14T08:04:43.659Z  [INFO ]  worker       thread-4  processed 1000 records
-2026-02-14T08:04:44.659Z  [DEBUG]  metrics      thread-2  retry attempt 1/3
-2026-02-14T08:04:44.973Z  [INFO ]  grpc         thread-2  server started on :8080
-2026-02-14T08:04:46.503Z  [INFO ]  http         thread-5  health check passed
-2026-02-14T08:04:46.984Z  [TRACE]  metrics      thread-1  poll returned Pending
-2026-02-14T08:04:48.387Z  [ERROR]  scheduler    thread-4  token validation failed
-2026-02-14T08:04:49.358Z  [INFO ]  db           thread-4  user alice logged in
-2026-02-14T08:04:51.180Z  [ERROR]  db           thread-1  failed to write file: disk full
-2026-02-14T08:04:52.144Z  [TRACE]  cache        thread-4  stack frame depth: 4
-2026-02-14T08:04:52.608Z  [INFO ]  cache        thread-7  health check passed
-2026-02-14T08:04:53.718Z  [INFO ]  api          thread-1  health check passed
-2026-02-14T08:04:54.000Z  [INFO ]  db           thread-5  user alice logged in
-2026-02-14T08:04:55.178Z  [INFO ]  worker       thread-1  backup completed in 3.2s
-2026-02-14T08:04:55.806Z  [WARN ]  config       thread-3  slow query detected (>500ms)
-2026-02-14T08:04:57.431Z  [INFO ]  scheduler    thread-4  health check passed
-2026-02-14T08:04:59.444Z  [DEBUG]  scheduler    thread-6  connection pool size: 8
-2026-02-14T08:05:01.255Z  [INFO ]  metrics      thread-7  processed 1000 records
-2026-02-14T08:05:02.307Z  [INFO ]  api          thread-8  health check passed
-2026-02-14T08:05:04.268Z  [DEBUG]  db           thread-4  parsed config: timeout=30s
-2026-02-14T08:05:06.539Z  [INFO ]  grpc         thread-3  server started on :8080
-2026-02-14T08:05:07.712Z  [ERROR]  config       thread-5  timeout after 30s
-2026-02-14T08:05:08.209Z  [DEBUG]  metrics      thread-6  parsed config: timeout=30s
-2026-02-14T08:05:08.317Z  [DEBUG]  metrics      thread-3  parsed config: timeout=30s
-2026-02-14T08:05:09.543Z  [TRACE]  http         thread-1  stack frame depth: 4
-2026-02-14T08:05:11.732Z  [INFO ]  metrics      thread-3  health check passed
-2026-02-14T08:05:13.760Z  [INFO ]  config       thread-3  user alice logged in
-2026-02-14T08:05:15.115Z  [INFO ]  auth         thread-3  server started on :8080
-2026-02-14T08:05:16.350Z  [WARN ]  worker       thread-5  queue depth: 9500
-2026-02-14T08:05:17.229Z  [DEBUG]  cache        thread-8  retry attempt 1/3
-2026-02-14T08:05:19.705Z  [WARN ]  cache        thread-7  deprecated API endpoint called
-2026-02-14T08:05:21.347Z  [INFO ]  scheduler    thread-2  user alice logged in
-2026-02-14T08:05:22.265Z  [TRACE]  http         thread-2  lock acquired on mutex
-2026-02-14T08:05:22.383Z  [INFO ]  worker       thread-2  processed 1000 records
-2026-02-14T08:05:23.414Z  [WARN ]  config       thread-8  deprecated API endpoint called
-2026-02-14T08:05:23.546Z  [WARN ]  metrics      thread-1  queue depth: 9500
-2026-02-14T08:05:24.689Z  [WARN ]  cache        thread-5  deprecated API endpoint called
-2026-02-14T08:05:26.562Z  [WARN ]  config       thread-2  deprecated API endpoint called
-2026-02-14T08:05:27.849Z  [INFO ]  metrics      thread-1  server started on :8080
-2026-02-14T08:05:29.952Z  [INFO ]  api          thread-6  server started on :8080
-2026-02-14T08:05:32.218Z  [INFO ]  api          thread-8  backup completed in 3.2s
-2026-02-14T08:05:33.001Z  [INFO ]  metrics      thread-4  health check passed
-2026-02-14T08:05:33.887Z  [TRACE]  worker       thread-4  raw bytes: 0xdeadbeef
-2026-02-14T08:05:34.514Z  [INFO ]  worker       thread-5  processed 1000 records
-2026-02-14T08:05:36.131Z  [WARN ]  api          thread-2  deprecated API endpoint called
-2026-02-14T08:05:37.936Z  [INFO ]  worker       thread-4  backup completed in 3.2s
-2026-02-14T08:05:39.190Z  [INFO ]  worker       thread-7  processed 1000 records
-2026-02-14T08:05:40.686Z  [WARN ]  http         thread-5  memory usage at 78%
-2026-02-14T08:05:42.919Z  [WARN ]  metrics      thread-4  slow query detected (>500ms)
-2026-02-14T08:05:45.030Z  [INFO ]  metrics      thread-4  processed 1000 records
-2026-02-14T08:05:46.734Z  [INFO ]  cache        thread-3  backup completed in 3.2s
-2026-02-14T08:05:47.092Z  [INFO ]  grpc         thread-5  user alice logged in
-2026-02-14T08:05:49.568Z  [TRACE]  metrics      thread-6  entering function process_request
-2026-02-14T08:05:51.892Z  [INFO ]  http         thread-1  backup completed in 3.2s
-2026-02-14T08:05:54.207Z  [TRACE]  http         thread-4  lock acquired on mutex
-2026-02-14T08:05:54.534Z  [INFO ]  grpc         thread-3  processed 1000 records
-2026-02-14T08:05:55.539Z  [DEBUG]  config       thread-2  query took 12ms
-2026-02-14T08:05:57.421Z  [INFO ]  scheduler    thread-2  user alice logged in
-2026-02-14T08:05:59.525Z  [TRACE]  metrics      thread-3  stack frame depth: 4
-2026-02-14T08:06:01.023Z  [DEBUG]  auth         thread-6  query took 12ms
-2026-02-14T08:06:02.298Z  [INFO ]  api          thread-5  health check passed
-2026-02-14T08:06:03.200Z  [INFO ]  cache        thread-1  user alice logged in
-2026-02-14T08:06:05.502Z  [INFO ]  cache        thread-1  health check passed
-2026-02-14T08:06:07.906Z  [INFO ]  cache        thread-1  server started on :8080
-2026-02-14T08:06:08.023Z  [DEBUG]  config       thread-3  connection pool size: 8
-2026-02-14T08:06:08.182Z  [INFO ]  cache        thread-8  server started on :8080
-2026-02-14T08:06:08.784Z  [INFO ]  worker       thread-3  backup completed in 3.2s
-2026-02-14T08:06:09.595Z  [INFO ]  db           thread-4  backup completed in 3.2s
-2026-02-14T08:06:09.825Z  [INFO ]  worker       thread-2  user alice logged in
-2026-02-14T08:06:11.246Z  [TRACE]  config       thread-5  poll returned Pending
-2026-02-14T08:06:11.359Z  [INFO ]  grpc         thread-4  user alice logged in
-2026-02-14T08:06:13.809Z  [INFO ]  metrics      thread-5  server started on :8080
-2026-02-14T08:06:15.259Z  [INFO ]  grpc         thread-5  health check passed
-2026-02-14T08:06:17.375Z  [INFO ]  api          thread-4  processed 1000 records
-2026-02-14T08:06:18.838Z  [DEBUG]  db           thread-5  cache miss for key user:123
-2026-02-14T08:06:19.502Z  [INFO ]  metrics      thread-6  server started on :8080
-2026-02-14T08:06:19.620Z  [INFO ]  metrics      thread-6  processed 1000 records
-2026-02-14T08:06:20.025Z  [DEBUG]  db           thread-2  connection pool size: 8
-2026-02-14T08:06:21.945Z  [WARN ]  cache        thread-7  slow query detected (>500ms)
-2026-02-14T08:06:23.886Z  [INFO ]  auth         thread-4  backup completed in 3.2s
-2026-02-14T08:06:24.258Z  [INFO ]  http         thread-7  user alice logged in
-2026-02-14T08:06:24.525Z  [INFO ]  grpc         thread-1  processed 1000 records
-2026-02-14T08:06:26.425Z  [WARN ]  scheduler    thread-2  cert expires in 7 days
-2026-02-14T08:06:26.547Z  [WARN ]  config       thread-7  queue depth: 9500
-2026-02-14T08:06:27.520Z  [WARN ]  api          thread-2  deprecated API endpoint called
-2026-02-14T08:06:29.496Z  [INFO ]  auth         thread-4  user alice logged in
-2026-02-14T08:06:31.250Z  [DEBUG]  worker       thread-3  retry attempt 1/3
-2026-02-14T08:06:32.895Z  [DEBUG]  scheduler    thread-1  query took 12ms
-2026-02-14T08:06:34.846Z  [DEBUG]  auth         thread-1  parsed config: timeout=30s
-2026-02-14T08:06:36.597Z  [ERROR]  cache        thread-6  token validation failed
-2026-02-14T08:06:38.610Z  [DEBUG]  api          thread-5  retry attempt 1/3
-2026-02-14T08:06:39.774Z  [INFO ]  scheduler    thread-8  user alice logged in
-2026-02-14T08:06:41.307Z  [INFO ]  metrics      thread-4  backup completed in 3.2s
-2026-02-14T08:06:42.201Z  [ERROR]  db           thread-4  panic: nil pointer dereference
-2026-02-14T08:06:44.595Z  [DEBUG]  worker       thread-6  connection pool size: 8
-2026-02-14T08:06:44.910Z  [DEBUG]  auth         thread-8  retry attempt 1/3
-2026-02-14T08:06:45.071Z  [INFO ]  auth         thread-6  server started on :8080
-2026-02-14T08:06:46.237Z  [WARN ]  config       thread-4  memory usage at 78%
-2026-02-14T08:06:48.554Z  [WARN ]  auth         thread-8  memory usage at 78%
-2026-02-14T08:06:50.998Z  [WARN ]  cache        thread-4  slow query detected (>500ms)
-2026-02-14T08:06:52.395Z  [ERROR]  db           thread-6  token validation failed
-2026-02-14T08:06:52.575Z  [WARN ]  grpc         thread-1  slow query detected (>500ms)
-2026-02-14T08:06:54.838Z  [DEBUG]  config       thread-8  retry attempt 1/3
-2026-02-14T08:06:55.081Z  [WARN ]  scheduler    thread-7  memory usage at 78%
-2026-02-14T08:06:55.387Z  [INFO ]  config       thread-3  server started on :8080
-2026-02-14T08:06:57.551Z  [DEBUG]  metrics      thread-4  connection pool size: 8
-2026-02-14T08:06:59.016Z  [WARN ]  grpc         thread-7  slow query detected (>500ms)
-2026-02-14T08:06:59.991Z  [DEBUG]  db           thread-1  query took 12ms
-2026-02-14T08:07:00.120Z  [WARN ]  db           thread-7  cert expires in 7 days
-2026-02-14T08:07:00.348Z  [DEBUG]  config       thread-3  cache miss for key user:123
-2026-02-14T08:07:02.230Z  [ERROR]  auth         thread-8  failed to write file: disk full
-2026-02-14T08:07:03.260Z  [TRACE]  http         thread-4  raw bytes: 0xdeadbeef
-2026-02-14T08:07:05.018Z  [DEBUG]  scheduler    thread-4  retry attempt 1/3
-2026-02-14T08:07:06.785Z  [DEBUG]  grpc         thread-6  query took 12ms
-2026-02-14T08:07:09.185Z  [TRACE]  http         thread-1  poll returned Pending
-2026-02-14T08:07:11.489Z  [ERROR]  grpc         thread-8  failed to write file: disk full
-2026-02-14T08:07:13.005Z  [WARN ]  db           thread-4  slow query detected (>500ms)
-2026-02-14T08:07:14.022Z  [ERROR]  db           thread-7  failed to write file: disk full
-2026-02-14T08:07:15.422Z  [WARN ]  config       thread-3  deprecated API endpoint called
-2026-02-14T08:07:16.974Z  [INFO ]  auth         thread-7  health check passed
-2026-02-14T08:07:18.441Z  [INFO ]  db           thread-6  backup completed in 3.2s
-2026-02-14T08:07:20.530Z  [TRACE]  http         thread-3  poll returned Pending
-2026-02-14T08:07:20.965Z  [DEBUG]  worker       thread-3  query took 12ms
-2026-02-14T08:07:23.032Z  [INFO ]  worker       thread-1  server started on :8080
-2026-02-14T08:07:23.835Z  [DEBUG]  worker       thread-2  cache miss for key user:123
-2026-02-14T08:07:24.209Z  [INFO ]  db           thread-4  processed 1000 records
-2026-02-14T08:07:26.492Z  [INFO ]  metrics      thread-1  server started on :8080
-2026-02-14T08:07:28.369Z  [INFO ]  config       thread-1  health check passed
-2026-02-14T08:07:30.610Z  [DEBUG]  worker       thread-2  query took 12ms
-2026-02-14T08:07:31.330Z  [WARN ]  cache        thread-2  slow query detected (>500ms)
-2026-02-14T08:07:32.572Z  [INFO ]  grpc         thread-7  backup completed in 3.2s
-2026-02-14T08:07:33.070Z  [WARN ]  metrics      thread-8  deprecated API endpoint called
-2026-02-14T08:07:33.600Z  [INFO ]  config       thread-7  health check passed
-2026-02-14T08:07:35.476Z  [ERROR]  worker       thread-5  failed to write file: disk full
-2026-02-14T08:07:37.805Z  [INFO ]  db           thread-5  backup completed in 3.2s
-2026-02-14T08:07:39.705Z  [INFO ]  scheduler    thread-4  user alice logged in
-2026-02-14T08:07:41.679Z  [TRACE]  api          thread-5  entering function process_request
-2026-02-14T08:07:42.954Z  [TRACE]  grpc         thread-8  lock acquired on mutex
-2026-02-14T08:07:44.194Z  [DEBUG]  config       thread-1  retry attempt 1/3
-2026-02-14T08:07:44.877Z  [WARN ]  metrics      thread-4  cert expires in 7 days
-2026-02-14T08:07:45.661Z  [TRACE]  worker       thread-4  lock acquired on mutex
-2026-02-14T08:07:47.492Z  [DEBUG]  http         thread-2  parsed config: timeout=30s
-2026-02-14T08:07:49.205Z  [INFO ]  api          thread-3  processed 1000 records
-2026-02-14T08:07:49.437Z  [INFO ]  auth         thread-1  health check passed
-2026-02-14T08:07:49.823Z  [INFO ]  db           thread-3  health check passed
-2026-02-14T08:07:50.709Z  [INFO ]  worker       thread-8  user alice logged in
-2026-02-14T08:07:53.023Z  [DEBUG]  grpc         thread-5  parsed config: timeout=30s
-2026-02-14T08:07:53.859Z  [WARN ]  cache        thread-3  queue depth: 9500
-2026-02-14T08:07:55.494Z  [INFO ]  grpc         thread-3  server started on :8080
-2026-02-14T08:07:56.840Z  [DEBUG]  scheduler    thread-2  retry attempt 1/3
-2026-02-14T08:07:57.411Z  [INFO ]  auth         thread-6  server started on :8080
-2026-02-14T08:07:58.121Z  [INFO ]  cache        thread-8  server started on :8080
-2026-02-14T08:07:59.703Z  [INFO ]  metrics      thread-5  user alice logged in
-2026-02-14T08:08:01.334Z  [ERROR]  db           thread-8  token validation failed
-2026-02-14T08:08:02.445Z  [INFO ]  auth         thread-6  health check passed
-2026-02-14T08:08:04.596Z  [INFO ]  metrics      thread-6  backup completed in 3.2s
-2026-02-14T08:08:05.867Z  [INFO ]  metrics      thread-5  processed 1000 records
-2026-02-14T08:08:06.258Z  [WARN ]  metrics      thread-8  memory usage at 78%
-2026-02-14T08:08:07.703Z  [ERROR]  db           thread-7  token validation failed
-2026-02-14T08:08:08.170Z  [TRACE]  http         thread-6  lock acquired on mutex
-2026-02-14T08:08:08.714Z  [ERROR]  api          thread-6  timeout after 30s
-2026-02-14T08:08:10.664Z  [INFO ]  metrics      thread-4  processed 1000 records
-2026-02-14T08:08:12.196Z  [INFO ]  auth         thread-7  health check passed
-2026-02-14T08:08:14.291Z  [DEBUG]  http         thread-8  retry attempt 1/3
-2026-02-14T08:08:15.046Z  [INFO ]  worker       thread-1  user alice logged in
-2026-02-14T08:08:16.756Z  [DEBUG]  db           thread-4  retry attempt 1/3
-2026-02-14T08:08:18.439Z  [INFO ]  config       thread-6  backup completed in 3.2s
-2026-02-14T08:08:18.934Z  [INFO ]  scheduler    thread-8  health check passed
-2026-02-14T08:08:19.284Z  [INFO ]  cache        thread-5  user alice logged in
-2026-02-14T08:08:21.694Z  [INFO ]  cache        thread-7  server started on :8080
-2026-02-14T08:08:23.943Z  [DEBUG]  auth         thread-7  parsed config: timeout=30s
-2026-02-14T08:08:24.648Z  [INFO ]  http         thread-3  processed 1000 records
-2026-02-14T08:08:24.775Z  [DEBUG]  auth         thread-7  cache miss for key user:123
-2026-02-14T08:08:24.958Z  [INFO ]  http         thread-7  backup completed in 3.2s
-2026-02-14T08:08:27.225Z  [INFO ]  cache        thread-1  processed 1000 records
-2026-02-14T08:08:28.103Z  [INFO ]  api          thread-4  processed 1000 records
-2026-02-14T08:08:29.387Z  [WARN ]  auth         thread-7  deprecated API endpoint called
-2026-02-14T08:08:30.129Z  [INFO ]  http         thread-1  server started on :8080
-2026-02-14T08:08:32.195Z  [INFO ]  config       thread-4  processed 1000 records
-2026-02-14T08:08:33.261Z  [INFO ]  grpc         thread-7  user alice logged in
-2026-02-14T08:08:34.313Z  [INFO ]  config       thread-4  backup completed in 3.2s
-2026-02-14T08:08:36.501Z  [ERROR]  http         thread-7  timeout after 30s
-2026-02-14T08:08:37.878Z  [WARN ]  worker       thread-1  deprecated API endpoint called
-2026-02-14T08:08:38.637Z  [INFO ]  grpc         thread-3  user alice logged in
-2026-02-14T08:08:38.933Z  [WARN ]  db           thread-8  memory usage at 78%
-2026-02-14T08:08:39.505Z  [INFO ]  api          thread-1  user alice logged in
-2026-02-14T08:08:41.051Z  [TRACE]  worker       thread-6  raw bytes: 0xdeadbeef
-2026-02-14T08:08:41.710Z  [DEBUG]  cache        thread-6  retry attempt 1/3
-2026-02-14T08:08:42.953Z  [INFO ]  grpc         thread-1  user alice logged in
-2026-02-14T08:08:44.323Z  [ERROR]  metrics      thread-1  connection refused to postgres:5432
-2026-02-14T08:08:45.563Z  [WARN ]  config       thread-5  memory usage at 78%
-2026-02-14T08:08:47.104Z  [INFO ]  http         thread-4  processed 1000 records
-2026-02-14T08:08:48.336Z  [INFO ]  api          thread-7  user alice logged in
-2026-02-14T08:08:48.943Z  [INFO ]  metrics      thread-6  health check passed
-2026-02-14T08:08:51.002Z  [INFO ]  api          thread-3  health check passed
-2026-02-14T08:08:53.060Z  [ERROR]  worker       thread-8  token validation failed
-2026-02-14T08:08:54.784Z  [INFO ]  auth         thread-2  user alice logged in
-2026-02-14T08:08:56.109Z  [INFO ]  worker       thread-6  processed 1000 records
-2026-02-14T08:08:58.585Z  [INFO ]  cache        thread-3  server started on :8080
-2026-02-14T08:09:00.090Z  [INFO ]  api          thread-4  user alice logged in
-2026-02-14T08:09:01.935Z  [INFO ]  cache        thread-8  user alice logged in
-2026-02-14T08:09:03.554Z  [INFO ]  config       thread-1  server started on :8080
-2026-02-14T08:09:05.305Z  [INFO ]  grpc         thread-7  server started on :8080
-2026-02-14T08:09:06.492Z  [INFO ]  metrics      thread-8  server started on :8080
-2026-02-14T08:09:07.146Z  [INFO ]  db           thread-2  backup completed in 3.2s
-2026-02-14T08:09:07.819Z  [INFO ]  http         thread-7  processed 1000 records
-2026-02-14T08:09:08.082Z  [INFO ]  worker       thread-3  user alice logged in
-2026-02-14T08:09:09.631Z  [INFO ]  api          thread-8  backup completed in 3.2s
-2026-02-14T08:09:11.708Z  [ERROR]  api          thread-1  failed to write file: disk full
-2026-02-14T08:09:12.276Z  [WARN ]  worker       thread-3  queue depth: 9500
-2026-02-14T08:09:13.643Z  [INFO ]  api          thread-6  processed 1000 records
-2026-02-14T08:09:14.357Z  [INFO ]  config       thread-8  processed 1000 records
-2026-02-14T08:09:15.138Z  [ERROR]  cache        thread-4  failed to write file: disk full
-2026-02-14T08:09:17.080Z  [INFO ]  grpc         thread-7  processed 1000 records
-2026-02-14T08:09:19.475Z  [ERROR]  api          thread-4  timeout after 30s
-2026-02-14T08:09:21.908Z  [INFO ]  worker       thread-3  backup completed in 3.2s
-2026-02-14T08:09:22.074Z  [INFO ]  metrics      thread-7  health check passed
-2026-02-14T08:09:22.920Z  [INFO ]  api          thread-4  server started on :8080
-2026-02-14T08:09:24.110Z  [INFO ]  http         thread-6  server started on :8080
-2026-02-14T08:09:26.584Z  [DEBUG]  scheduler    thread-4  retry attempt 1/3
-2026-02-14T08:09:27.999Z  [ERROR]  cache        thread-2  connection refused to postgres:5432
-2026-02-14T08:09:28.819Z  [INFO ]  cache        thread-3  processed 1000 records
-2026-02-14T08:09:31.248Z  [INFO ]  cache        thread-2  processed 1000 records
-2026-02-14T08:09:33.469Z  [INFO ]  cache        thread-4  health check passed
-2026-02-14T08:09:35.840Z  [DEBUG]  grpc         thread-6  parsed config: timeout=30s
-2026-02-14T08:09:36.204Z  [ERROR]  worker       thread-3  failed to write file: disk full
-2026-02-14T08:09:36.659Z  [INFO ]  grpc         thread-2  processed 1000 records
-2026-02-14T08:09:37.873Z  [INFO ]  api          thread-1  processed 1000 records
-2026-02-14T08:09:39.762Z  [ERROR]  db           thread-6  timeout after 30s
-2026-02-14T08:09:40.803Z  [ERROR]  api          thread-1  token validation failed
-2026-02-14T08:09:43.009Z  [INFO ]  db           thread-1  backup completed in 3.2s
-2026-02-14T08:09:44.814Z  [DEBUG]  metrics      thread-7  retry attempt 1/3
-2026-02-14T08:09:45.796Z  [ERROR]  auth         thread-1  failed to write file: disk full
-2026-02-14T08:09:46.595Z  [INFO ]  http         thread-4  server started on :8080
-2026-02-14T08:09:46.809Z  [DEBUG]  config       thread-8  connection pool size: 8
-2026-02-14T08:09:47.515Z  [INFO ]  db           thread-5  health check passed
-2026-02-14T08:09:49.189Z  [INFO ]  config       thread-5  backup completed in 3.2s
-2026-02-14T08:09:51.265Z  [INFO ]  scheduler    thread-4  user alice logged in
-2026-02-14T08:09:52.323Z  [INFO ]  http         thread-8  server started on :8080
-2026-02-14T08:09:54.322Z  [INFO ]  db           thread-6  health check passed
-2026-02-14T08:09:54.551Z  [INFO ]  worker       thread-8  backup completed in 3.2s
-2026-02-14T08:09:54.676Z  [INFO ]  grpc         thread-8  user alice logged in
-2026-02-14T08:09:56.491Z  [INFO ]  db           thread-7  user alice logged in
-2026-02-14T08:09:56.834Z  [DEBUG]  cache        thread-6  connection pool size: 8
-2026-02-14T08:09:58.494Z  [WARN ]  http         thread-5  memory usage at 78%
-2026-02-14T08:09:58.723Z  [WARN ]  cache        thread-5  deprecated API endpoint called
-2026-02-14T08:10:00.249Z  [ERROR]  cache        thread-6  panic: nil pointer dereference
-2026-02-14T08:10:02.447Z  [WARN ]  db           thread-2  deprecated API endpoint called
-2026-02-14T08:10:03.028Z  [TRACE]  http         thread-1  entering function process_request
-2026-02-14T08:10:05.134Z  [INFO ]  cache        thread-1  backup completed in 3.2s
-2026-02-14T08:10:07.240Z  [WARN ]  auth         thread-5  memory usage at 78%
-2026-02-14T08:10:08.664Z  [INFO ]  db           thread-7  processed 1000 records
-2026-02-14T08:10:10.547Z  [WARN ]  db           thread-6  memory usage at 78%
-2026-02-14T08:10:12.241Z  [INFO ]  metrics      thread-7  health check passed
-2026-02-14T08:10:12.841Z  [INFO ]  config       thread-8  backup completed in 3.2s
-2026-02-14T08:10:14.499Z  [DEBUG]  worker       thread-8  retry attempt 1/3
-2026-02-14T08:10:15.196Z  [DEBUG]  metrics      thread-7  connection pool size: 8
-2026-02-14T08:10:16.221Z  [INFO ]  http         thread-1  user alice logged in
-2026-02-14T08:10:18.131Z  [ERROR]  grpc         thread-3  connection refused to postgres:5432
-2026-02-14T08:10:20.047Z  [DEBUG]  worker       thread-1  parsed config: timeout=30s
-2026-02-14T08:10:21.655Z  [INFO ]  auth         thread-6  backup completed in 3.2s
-2026-02-14T08:10:23.805Z  [INFO ]  auth         thread-6  server started on :8080
-2026-02-14T08:10:25.497Z  [DEBUG]  cache        thread-6  connection pool size: 8
-2026-02-14T08:10:25.928Z  [INFO ]  http         thread-8  user alice logged in
-2026-02-14T08:10:28.227Z  [ERROR]  metrics      thread-8  token validation failed
-2026-02-14T08:10:29.102Z  [INFO ]  grpc         thread-4  processed 1000 records
-2026-02-14T08:10:30.051Z  [INFO ]  api          thread-7  health check passed
-2026-02-14T08:10:30.838Z  [DEBUG]  config       thread-7  connection pool size: 8
-2026-02-14T08:10:32.126Z  [INFO ]  grpc         thread-5  backup completed in 3.2s
-2026-02-14T08:10:34.334Z  [INFO ]  db           thread-2  backup completed in 3.2s
-2026-02-14T08:10:35.953Z  [WARN ]  grpc         thread-3  slow query detected (>500ms)
-2026-02-14T08:10:37.271Z  [INFO ]  worker       thread-1  health check passed
-2026-02-14T08:10:38.885Z  [INFO ]  metrics      thread-5  user alice logged in
-2026-02-14T08:10:39.625Z  [INFO ]  http         thread-1  processed 1000 records
-2026-02-14T08:10:41.515Z  [WARN ]  scheduler    thread-1  memory usage at 78%
-2026-02-14T08:10:43.065Z  [WARN ]  http         thread-1  deprecated API endpoint called
-2026-02-14T08:10:43.544Z  [INFO ]  api          thread-3  backup completed in 3.2s
-2026-02-14T08:10:45.440Z  [INFO ]  api          thread-1  server started on :8080
-2026-02-14T08:10:46.001Z  [ERROR]  grpc         thread-2  connection refused to postgres:5432
-2026-02-14T08:10:48.301Z  [WARN ]  api          thread-5  queue depth: 9500
+00:00:00:000001 [TRACE] com.example.core.InboundMessageReceiver - Entering receive() method, awaiting next message on queue=primary, timeout=5000ms
+00:00:00:000148 [DEBUG] com.example.auth.TokenValidator - Validating JWT token: header=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9, claims count=7, expiry check enabled
+00:00:00:000312 [INFO ] com.example.http.RequestHandler - GET /api/v1/users 200 OK in 23ms — client=192.168.1.42 user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
+00:00:00:000410 [INFO ] com.example.core.Pinfo - Component=SessionManager status=READY activeSessionCount=142 maxSessions=500 memoryUsedMb=128.4 gcPressure=LOW
+00:00:00:000935 [WARN ] com.example.db.ConnectionPool - Pool utilization high: used=48/50 connections, waitQueue=12, avgWaitMs=340, consider increasing pool size
+00:00:01:001200 [ERROR] com.example.grpc.ServiceGateway - RPC call failed: method=GetUserProfile deadline_exceeded=true elapsed=5003ms target=user-service:8080
+00:00:01:002100 [DEBUG] com.example.cache.RedisClient - Cache MISS for key=user:session:7f3a9b2c1d4e5f6a latency=1.2ms fallback=database
+00:00:01:003400 [INFO ] com.example.core.InboundMessageReceiver - Message received: topic=order.events msgId=msg-9f8e7d6c-5b4a-3210 size=2048bytes partition=3 offset=891234 processingTimeMs=12
+00:00:01:004500 [TRACE] com.example.scheduler.JobRunner - Tick: jobId=heartbeat-monitor elapsed=1000ms nextRunIn=1000ms threadId=thread-pool-4
+00:00:01:005600 [DEBUG] com.example.auth.SessionManager - Session extended: userId=usr_9b2c1d4e token_age=28min remaining=32min refreshed=true
+00:00:02:000100 [INFO ] com.example.http.RequestHandler - POST /api/v1/orders 201 Created in 145ms — orderId=ord-2024-0001 userId=usr_9b2c1d4e items=3 total=127.50
+00:00:02:001300 [WARN ] com.example.core.InboundMessageReceiver - Message processing slow: msgId=msg-8f7e6d5c-4a39-2108 processingTimeMs=4500 threshold=2000ms queue=secondary backpressure=building
+00:00:02:002700 [INFO ] com.example.core.Pinfo - Component=OrderProcessor status=BUSY activeJobs=23 queueDepth=45 avgProcessingMs=320 peakRatePerSec=18.4
+00:00:02:003800 [DEBUG] com.example.db.QueryExecutor - SELECT query: table=orders duration=87ms rows=1250 indexes_used=3 plan=IndexScan(idx_user_id, idx_created_at)
+00:00:02:005000 [ERROR] com.example.payments.StripeClient - Payment API call failed: status=402 message="Your card has insufficient funds" orderId=ord-2024-0001 retryIn=0ms
+00:00:02:005900 [INFO ] com.example.http.RequestHandler - GET /api/v1/products?category=electronics&page=1&limit=50 200 OK in 67ms — resultCount=50 totalPages=24
+00:00:03:001200 [TRACE] com.example.core.InboundMessageReceiver - Queue poll: queue=priority polled=0 backlog=0 idleMs=1000
+00:00:03:002400 [DEBUG] com.example.monitoring.MetricsCollector - Snapshot: cpu=34.2% mem=2145MB heapUsed=512MB heapMax=1024MB gcCount=12 gcTimeMs=45 threadCount=128
+00:00:03:003600 [INFO ] com.example.auth.TokenValidator - Token validated successfully: userId=usr_4a3b2c1d scope=read:orders,write:orders issuer=auth.example.com
+00:00:03:004800 [WARN ] com.example.cache.RedisClient - Connection reset by peer: host=redis-primary:6379 reconnecting in 500ms attempt=1/5
+00:00:03:006100 [INFO ] com.example.core.Pinfo - Component=InboundMessageReceiver status=DEGRADED activeWorkers=4 idleWorkers=0 queueDepth=89 droppedMessages=0 lastErrorMs=1240ago
+00:00:04:000300 [ERROR] com.example.db.ConnectionPool - Failed to acquire connection: timeout after 5000ms pool=primary available=0 waiting=18 — consider scaling database or reducing load
+00:00:04:001500 [DEBUG] com.example.http.RequestHandler - Incoming request: method=GET path=/api/v1/users/usr_9b2c1d4e headers=12 body_size=0 remote=10.0.2.15
+00:00:04:002700 [INFO ] com.example.core.InboundMessageReceiver - Batch committed: batchId=batch-0042 messages=128 failedMessages=0 duration=234ms throughput=547.0msg/s
+00:00:04:003900 [TRACE] com.example.scheduler.JobRunner - Job completed: jobId=cleanup-stale-sessions duration=1234ms deleted=7 nextRun=2026-02-21T00:05:00Z
+00:00:04:005200 [WARN ] com.example.auth.RateLimiter - Rate limit approaching: clientId=client-abc123 requests=95/100 windowResetIn=12s action=warn
+00:00:04:006400 [INFO ] com.example.http.RequestHandler - PATCH /api/v1/users/usr_9b2c1d4e 200 OK in 89ms — fieldsUpdated=email,displayName
+00:00:05:000100 [DEBUG] com.example.core.InboundMessageReceiver - Worker thread-pool-2 idle, waiting for work. currentLoad=0.0 totalProcessed=8421
+00:00:05:001300 [INFO ] com.example.core.Pinfo - Component=PaymentProcessor status=READY pendingRefunds=2 processedToday=1847 totalAmountUSD=94231.50
+00:00:05:002500 [ERROR] com.example.grpc.ServiceGateway - Connection refused: target=inventory-service:8080 error="dial tcp 10.0.1.12:8080: connect: connection refused" retrying in 2000ms
+00:00:05:003700 [WARN ] com.example.db.QueryExecutor - Slow query detected: table=audit_log duration=3421ms rows=450000 query="SELECT * FROM audit_log WHERE user_id = ? AND created_at > ?" — add index on (user_id, created_at)
+00:00:05:004900 [TRACE] com.example.core.InboundMessageReceiver - Heartbeat: workerId=worker-5 alive=true processedLastMinute=312 errorRate=0.00% uptime=300s
+00:00:06:000200 [INFO ] com.example.http.RequestHandler - DELETE /api/v1/sessions/sess_7f3a9b2c 204 No Content in 12ms — sessionId=sess_7f3a9b2c userId=usr_9b2c1d4e
+00:00:06:001400 [DEBUG] com.example.auth.TokenValidator - Token cache hit: userId=usr_4a3b2c1d cached_for=120s remaining_ttl=87s
+00:00:06:002600 [WARN ] com.example.core.InboundMessageReceiver - Dead letter queue growing: dlq=order.events.dlq size=23 maxSize=100 oldestMessage=2026-02-20T23:58:12Z
+00:00:06:003800 [INFO ] com.example.db.MigrationRunner - Migration applied: version=20260221_add_idx_orders_status duration=1823ms affectedRows=1247391
+00:00:06:005000 [ERROR] com.example.core.Pinfo - Component=CacheWarmer status=FAILED error="redis.exceptions.ConnectionError: Error 111 connecting to redis-primary:6379. Connection refused." willRetry=true nextAttempt=30s
+00:00:07:000100 [TRACE] com.example.scheduler.JobRunner - Scheduler tick: pendingJobs=3 runningJobs=2 completedToday=147 failedToday=1
+00:00:07:001300 [DEBUG] com.example.core.InboundMessageReceiver - Partition rebalance detected: consumer=flash-consumer-group partition=5 action=revoked newOwner=worker-node-3
+00:00:07:002500 [INFO ] com.example.http.RequestHandler - GET /api/v1/reports/daily?date=2026-02-20 200 OK in 892ms — reportId=rpt-20260220 rows=84321 format=json size=12.4MB
+00:00:07:003700 [WARN ] com.example.auth.SessionManager - Session nearing expiry: userId=usr_1a2b3c4d sessionAge=55min maxAge=60min warnAt=55min — refreshing automatically
+00:00:07:004900 [INFO ] com.example.core.Pinfo - Component=ReportGenerator status=READY lastReportDuration=892ms generatedToday=12 nextScheduled=2026-02-21T01:00:00Z
+00:00:08:000200 [DEBUG] com.example.db.ConnectionPool - Health check OK: pool=primary active=32/50 idle=18 avg_checkout_ms=2.1 max_checkout_ms=340
+00:00:08:001400 [INFO ] com.example.core.InboundMessageReceiver - Consumer group rebalanced: group=flash-consumer-group partitions=10 members=3 generationId=42
+00:00:08:002600 [ERROR] com.example.payments.StripeClient - Webhook delivery failed: event=payment_intent.succeeded endpointId=we_1234567890 httpStatus=500 response="Internal Server Error" — retryScheduled=true nextRetry=300s
+00:00:08:003800 [TRACE] com.example.core.InboundMessageReceiver - Processing message: msgId=msg-1a2b3c4d-5e6f-7890 partition=2 offset=123456 key=order:ord-2024-0042 size=512bytes lag=0
+00:00:08:005000 [WARN ] com.example.monitoring.AlertManager - Alert fired: name=HighMemoryUsage severity=WARNING value=78.4% threshold=75.0% duration=300s labels={env=production,region=us-east-1}
+00:00:09:000100 [INFO ] com.example.http.RequestHandler - POST /api/v1/webhooks/stripe 200 OK in 23ms — eventType=payment_intent.succeeded processed=true
+00:00:09:001300 [DEBUG] com.example.cache.RedisClient - HMSET key=user:profile:usr_9b2c1d4e fields=8 ttl=3600s latency=0.8ms
+00:00:09:002500 [INFO ] com.example.core.Pinfo - Component=WebhookProcessor status=READY receivedToday=342 processedToday=341 failedToday=1 avgProcessingMs=18.2
+00:00:09:003700 [ERROR] com.example.db.QueryExecutor - Query failed: ERROR 1205 (HY000): Lock wait timeout exceeded; try restarting transaction — query=UPDATE orders SET status='completed' WHERE id=? retrying=true attempt=1/3
+00:00:09:004900 [TRACE] com.example.scheduler.JobRunner - Job enqueued: jobId=send-digest-emails scheduledAt=2026-02-21T00:10:00Z priority=LOW estimatedDuration=45s
+00:00:10:000200 [WARN ] com.example.auth.RateLimiter - Rate limit exceeded: clientId=client-malicious ip=203.0.113.42 requests=101/100 action=blocked windowResetIn=8s
+00:00:10:001400 [INFO ] com.example.core.InboundMessageReceiver - Throughput report: lastMinute=4821msgs processedOk=4818 failed=3 avgLatencyMs=14.2 p99LatencyMs=87.3
+00:00:10:002600 [DEBUG] com.example.auth.TokenValidator - Token refresh issued: userId=usr_4a3b2c1d oldTokenAge=58min newExpiry=2026-02-21T01:10:00Z
+00:00:10:003800 [INFO ] com.example.http.RequestHandler - GET /health 200 OK in 2ms — db=UP cache=UP mq=UP version=2.4.1
+00:00:10:005000 [WARN ] com.example.db.ConnectionPool - Pool nearing exhaustion: pool=replica used=46/50 waiting=8 avgWaitMs=280 consider adding read replica
+00:00:11:000100 [INFO ] com.example.core.Pinfo - Component=HealthChecker status=READY allServicesUp=false degradedServices=["CacheWarmer"] criticalServices=[] uptimeSeconds=660
+00:00:11:001300 [ERROR] com.example.grpc.ServiceGateway - Service discovery failed: service=notification-service error="no healthy endpoints found" endpoints_checked=3 all_failed=true circuit_breaker=OPEN
+00:00:11:002500 [TRACE] com.example.core.InboundMessageReceiver - Offset commit: partition=3 offset=891362 consumerGroup=flash-consumer-group success=true duration=3ms
+00:00:11:003700 [DEBUG] com.example.monitoring.MetricsCollector - Flushing metrics: buffer_size=842 flushed=842 elapsed=18ms next_flush_in=30s
+00:00:11:004900 [INFO ] com.example.http.RequestHandler - GET /api/v1/inventory?sku=PROD-1234 200 OK in 334ms — inStock=true quantity=4892 warehouseId=wh-east-01
+00:00:12:000200 [WARN ] com.example.core.InboundMessageReceiver - Consumer lag detected: partition=7 lag=1823 threshold=500 consumerGroup=flash-consumer-group — scaling up workers
+00:00:12:001400 [INFO ] com.example.db.QueryExecutor - Query OK: INSERT INTO order_events SELECT duration=12ms rowsInserted=1 table=order_events index=PRIMARY
+00:00:12:002600 [DEBUG] com.example.auth.SessionManager - Session cleanup: expiredSessions=3 removedTokens=3 nextCleanupIn=300s
+00:00:12:003800 [INFO ] com.example.core.Pinfo - Component=InventorySync status=READY lastSyncAt=2026-02-21T00:11:30Z syncDurationMs=234 updatedSKUs=142 conflictsResolved=0
+00:00:12:005000 [ERROR] com.example.payments.StripeClient - idempotency key collision: key=idem-ord-2024-0001-retry-1 original_request=2026-02-21T00:02:05Z action=using_cached_response
+00:00:13:000100 [TRACE] com.example.scheduler.JobRunner - Heartbeat job: timestamp=2026-02-21T00:13:00Z services=12 healthy=11 degraded=1 critical=0
+00:00:13:001300 [INFO ] com.example.core.InboundMessageReceiver - Scaling event: added 2 worker threads; newWorkerCount=6 reason=high_lag queueDepth=89 thresholdDepth=50
+00:00:13:002500 [WARN ] com.example.db.QueryExecutor - Read replica lag: primary_lsn=0/89A1C30 replica_lsn=0/89A1A12 lag_bytes=542 lag_seconds=0.8 threshold_seconds=1.0
+00:00:13:003700 [DEBUG] com.example.cache.RedisClient - Pipeline executed: commands=24 latency=3.2ms hitRate=0.94
+00:00:13:004900 [INFO ] com.example.http.RequestHandler - PUT /api/v1/products/PROD-1234 200 OK in 78ms — version=15 etag="d4e5f6a7b8c9" cacheInvalidated=true
+00:00:14:000200 [ERROR] com.example.db.ConnectionPool - Deadlock detected and resolved: query=UPDATE inventory SET quantity=quantity-1 WHERE sku=? waitingThread=thread-pool-6 victimThread=thread-pool-9 retrying=true
+00:00:14:001400 [INFO ] com.example.core.Pinfo - Component=NotificationService status=STANDBY reason="circuit_breaker=OPEN" willRecover=true estimatedRecoveryAt=2026-02-21T00:15:00Z
+00:00:14:002600 [TRACE] com.example.core.InboundMessageReceiver - DLQ retry attempt: msgId=msg-dead-0001 attempt=1/3 originalError="connection_timeout" delay=30s
+00:00:14:003800 [DEBUG] com.example.auth.TokenValidator - Introspection cache warmed: tokens=342 took=45ms
+00:00:14:005000 [WARN ] com.example.monitoring.AlertManager - Alert resolved: name=HighMemoryUsage resolvedAt=2026-02-21T00:14:50Z duration=14m50s
+00:00:15:000100 [INFO ] com.example.http.RequestHandler - GET /api/v1/users?page=1&limit=20&sort=created_at&order=desc 200 OK in 34ms — count=20 total=8421
+00:00:15:001300 [INFO ] com.example.core.InboundMessageReceiver - DLQ retry succeeded: msgId=msg-dead-0001 attempt=1 processedOk=true removed_from_dlq=true
+00:00:15:002500 [DEBUG] com.example.db.QueryExecutor - EXPLAIN ANALYZE result: rows_estimated=12000 rows_actual=11824 execution_time=87ms plan_time=1.2ms worst_node=HashJoin(cost=450..2340)
+00:00:15:003700 [INFO ] com.example.core.Pinfo - Component=CacheWarmer status=RECOVERING warmedKeys=12847 totalKeys=50000 progress=25.7% estimatedCompletionIn=90s
+00:00:15:004900 [ERROR] com.example.grpc.ServiceGateway - Stream interrupted: method=SubscribeToEvents streamId=stream-0042 error="transport: the client connection is closing" clientId=client-abc123 reconnecting=true
+00:00:16:000200 [TRACE] com.example.scheduler.JobRunner - Cron trigger: expression="*/5 * * * *" nextFire=2026-02-21T00:20:00Z jobClass=com.example.jobs.DataSyncJob
+00:00:16:001400 [WARN ] com.example.auth.RateLimiter - Sliding window reset: clientId=client-abc123 newAllowance=100/100 windowStart=2026-02-21T00:16:00Z
+00:00:16:002600 [INFO ] com.example.core.InboundMessageReceiver - Partition assignment refreshed: consumer=flash-consumer-group-3 newPartitions=[0,1,4,5] removedPartitions=[2,3] cause=rebalance
+00:00:16:003800 [DEBUG] com.example.http.RequestHandler - Response sent: requestId=req-9f8e7d6c method=GET path=/api/v1/inventory status=200 duration=334ms content_length=1842
+00:00:16:005000 [INFO ] com.example.db.MigrationRunner - Checking for pending migrations: current_version=20260221_add_idx_orders_status pending=0 status=UP_TO_DATE
+00:00:17:000100 [WARN ] com.example.core.InboundMessageReceiver - Slow consumer detected on partition=5 lag=2340 lagDelta=+517 in 5s — auto-scaling threshold exceeded
+00:00:17:001300 [INFO ] com.example.core.Pinfo - Component=CacheWarmer status=RECOVERING warmedKeys=25103 totalKeys=50000 progress=50.2% estimatedCompletionIn=45s
+00:00:17:002500 [ERROR] com.example.db.QueryExecutor - Connection closed unexpectedly: pool=primary host=db-primary:5432 error="SSL SYSCALL error: EOF detected" reConnecting=true waitMs=100
+00:00:17:003700 [TRACE] com.example.core.InboundMessageReceiver - Ack sent: msgId=msg-1a2b3c4d-5e6f-7890 ackOffset=123457 partition=2 broker=kafka-broker-01:9092
+00:00:17:004900 [DEBUG] com.example.monitoring.MetricsCollector - Prometheus scrape: duration=8ms metrics_exposed=342 scrape_errors=0
+00:00:18:000200 [INFO ] com.example.http.RequestHandler - POST /api/v1/auth/login 200 OK in 234ms — userId=usr_2c3d4e5f method=password_hash mfaRequired=false sessionCreated=true
+00:00:18:001400 [WARN ] com.example.auth.SessionManager - Concurrent login detected: userId=usr_9b2c1d4e existingSessions=3 newSession=sess_8e9f0a1b action=allow maxAllowed=5
+00:00:18:002600 [INFO ] com.example.core.InboundMessageReceiver - Message acknowledged: msgId=msg-2b3c4d5e offset=234567 partition=0 group=flash-consumer-group lag=0 elapsedMs=8
+00:00:18:003800 [DEBUG] com.example.cache.RedisClient - Eviction notice: evictedKeys=142 reason=maxmemory-policy=allkeys-lru usedMemory=512MB maxMemory=512MB
+00:00:18:005000 [ERROR] com.example.payments.StripeClient - Webhook signature verification failed: endpoint=we_1234567890 expectedSig=sha256=abc123... actualSig=sha256=def456... action=reject
+00:00:19:000100 [TRACE] com.example.scheduler.JobRunner - Cleanup pass: removedExpiredJobs=0 activeJobs=3 nextCleanup=60s
+00:00:19:001300 [INFO ] com.example.core.Pinfo - Component=CacheWarmer status=READY warmedKeys=50000 totalKeys=50000 progress=100% duration=104s throughput=480.8keys/s
+00:00:19:002500 [DEBUG] com.example.auth.TokenValidator - Bulk token expiry check: checked=342 expired=2 revoked=0 refreshed=2
+00:00:19:003700 [WARN ] com.example.db.ConnectionPool - Connection lifespan exceeded: connectionId=conn-0042 age=3601s maxAge=3600s recycling=true replacement=conn-0043
+00:00:19:004900 [INFO ] com.example.http.RequestHandler - GET /api/v1/analytics/funnel?from=2026-02-20&to=2026-02-21 200 OK in 1243ms — stages=5 conversionRate=0.0342
+00:00:20:000200 [INFO ] com.example.core.InboundMessageReceiver - All partitions current: group=flash-consumer-group totalLag=0 partitions=10 highWaterMark=891500
+00:00:20:001400 [ERROR] com.example.grpc.ServiceGateway - Circuit breaker tripped: service=notification-service consecutiveFailures=10 threshold=10 state=OPEN nextHalfOpen=2026-02-21T00:20:30Z
+00:00:20:002600 [DEBUG] com.example.db.QueryExecutor - Prepared statement cache: size=128/200 evictions=12 hits=8421 misses=342 hitRate=96.1%
+00:00:20:003800 [WARN ] com.example.monitoring.AlertManager - New alert: name=SlowQueryDetected severity=WARNING table=audit_log query_duration=3421ms threshold=2000ms — index recommendation=CREATE INDEX idx_audit_user_created ON audit_log(user_id, created_at)
+00:00:20:005000 [TRACE] com.example.core.InboundMessageReceiver - Nack sent: msgId=msg-dead-retry-0001 reason="downstream_timeout" requeue=false dlq=order.events.dlq
+00:00:21:000100 [INFO ] com.example.http.RequestHandler - GET /api/v1/users/usr_2c3d4e5f/orders?status=pending 200 OK in 45ms — count=3 totalValue=284.97
+00:00:21:001300 [DEBUG] com.example.auth.SessionManager - Session validated: sessionId=sess_8e9f0a1b userId=usr_2c3d4e5f age=180s valid=true csrfOk=true
+00:00:21:002500 [INFO ] com.example.core.Pinfo - Component=AuditLogger status=READY writtenToday=48721 failedWrites=0 bufferUsage=12.4% flushIntervalMs=500
+00:00:21:003700 [WARN ] com.example.cache.RedisClient - Cluster slot moved: slot=7834 from=redis-shard-1:7001 to=redis-shard-2:7001 redirecting=true
+00:00:21:004900 [ERROR] com.example.db.ConnectionPool - All connections exhausted on pool=replica: waiting=24 timeout=5000ms — falling back to primary pool. Performance may degrade.
+00:00:22:000200 [TRACE] com.example.scheduler.JobRunner - Job started: jobId=send-digest-emails started=2026-02-21T00:22:00Z workerThread=thread-pool-7 estimatedDuration=45s
+00:00:22:001400 [INFO ] com.example.core.InboundMessageReceiver - Batch processing complete: batchId=batch-0043 input=256 processed=256 failed=0 duration=478ms avgPerMsgMs=1.9
+00:00:22:002600 [DEBUG] com.example.monitoring.MetricsCollector - Disk I/O stats: read=124MB/s write=87MB/s iops=12400 util=34.2% lat_read=0.8ms lat_write=1.2ms
+00:00:22:003800 [INFO ] com.example.http.RequestHandler - POST /api/v1/orders/ord-2024-0002/refund 202 Accepted in 67ms — refundId=ref-0001 amount=45.00 estimatedProcessing=5days
+00:00:22:005000 [WARN ] com.example.auth.RateLimiter - Burst detected: clientId=client-bulk-importer requests=840/1000 windowType=burst burstAllowance=1000 action=allow
+00:00:23:000100 [INFO ] com.example.core.Pinfo - Component=RefundProcessor status=BUSY activeRefunds=3 processedToday=12 totalAmountUSD=234.50 avgProcessingDays=4.2
+00:00:23:001300 [ERROR] com.example.grpc.ServiceGateway - Circuit breaker half-open probe: service=notification-service probe_result=FAIL consecutive=1/3 state=OPEN
+00:00:23:002500 [TRACE] com.example.core.InboundMessageReceiver - Polling Kafka: topics=["order.events","user.events","payment.events"] pollTimeoutMs=1000 fetchedMessages=34
+00:00:23:003700 [DEBUG] com.example.db.QueryExecutor - Index scan: index=idx_orders_status table=orders condition="status='pending' AND created_at > NOW()-INTERVAL 1 DAY" rows=4231 duration=12ms
+00:00:23:004900 [INFO ] com.example.http.RequestHandler - WEBSOCKET /ws/notifications upgrade 101 — clientId=client-abc123 userId=usr_9b2c1d4e protocol=notification/v2
+00:00:24:000200 [WARN ] com.example.core.InboundMessageReceiver - Message redelivery: msgId=msg-old-0001 deliveryCount=3 maxDeliveries=5 originalTimestamp=2026-02-20T23:55:00Z age=5m0s
+00:00:24:001400 [INFO ] com.example.db.MigrationRunner - Schema version locked by: host=app-server-01 pid=12345 since=2026-02-21T00:06:00Z lock_age=18m lock_timeout=30m
+00:00:24:002600 [DEBUG] com.example.auth.TokenValidator - JWKS refresh: url=https://auth.example.com/.well-known/jwks.json keys=3 rotated=0 cached=true nextRefresh=3600s
+00:00:24:003800 [INFO ] com.example.core.Pinfo - Component=WebSocketServer status=READY activeConnections=47 maxConnections=1000 messagesPerSec=312.4 bytesPerSec=48291
+00:00:24:005000 [ERROR] com.example.payments.StripeClient - Retry exhausted: orderId=ord-2024-0001 attempts=3 lastError="insufficient_funds" action=notify_user escalated=true
+00:00:25:000100 [TRACE] com.example.scheduler.JobRunner - Digest email job progress: sent=124 failed=0 remaining=342 elapsed=23s estimatedRemaining=64s
+00:00:25:001300 [INFO ] com.example.core.InboundMessageReceiver - Flow control triggered: queueDepth=92 maxDepth=100 pausing_ingestion=true resumeWhen=queueDepth<50
+00:00:25:002500 [DEBUG] com.example.cache.RedisClient - SCAN complete: pattern=user:session:* matched=342 elapsed=8ms cursor_iterations=12
+00:00:25:003700 [WARN ] com.example.db.ConnectionPool - Connection error rate elevated: pool=primary errors=3 in last 60s threshold=2 action=health_check_all pool state=DEGRADED
+00:00:25:004900 [INFO ] com.example.http.RequestHandler - GET /metrics 200 OK in 8ms — format=prometheus metrics=342
+00:00:26:000200 [INFO ] com.example.core.Pinfo - Component=ConnectionPool status=DEGRADED healthyConnections=47 totalConnections=50 errorRatePerMin=3 maxErrorRate=2 autoHealing=true
+00:00:26:001400 [ERROR] com.example.db.QueryExecutor - Replication lag exceeded threshold: replica=db-replica-02 lag=4.2s threshold=2.0s action=temporarily_excluding_from_pool
+00:00:26:002600 [TRACE] com.example.core.InboundMessageReceiver - Resume ingestion: reason=queueDepth=42<threshold=50 lag_before_pause=92 duration_paused=1s
+00:00:26:003800 [DEBUG] com.example.monitoring.MetricsCollector - Alert evaluation: rules=24 fired=1 pending=2 resolved=1 evalDuration=3ms
+00:00:26:005000 [WARN ] com.example.auth.SessionManager - Suspicious activity detected: userId=usr_1a2b3c4d loginCount=8 in last 10min threshold=5 ip=198.51.100.42 action=challenge
+00:00:27:000100 [INFO ] com.example.http.RequestHandler - POST /api/v1/auth/mfa/verify 200 OK in 45ms — userId=usr_1a2b3c4d method=totp success=true
+00:00:27:001300 [INFO ] com.example.core.InboundMessageReceiver - Rebalance complete: duration=2340ms assignedPartitions=4 totalConsumers=3 group=flash-consumer-group generationId=43
+00:00:27:002500 [DEBUG] com.example.db.QueryExecutor - Vacuum analyze completed: table=orders duration=342ms dead_tuples_removed=12421 live_tuples=1247391 pages_processed=4821
+00:00:27:003700 [INFO ] com.example.core.Pinfo - Component=ConnectionPool status=READY healthyConnections=50 totalConnections=50 errorRatePerMin=0 restoredAt=2026-02-21T00:27:00Z
+00:00:27:004900 [ERROR] com.example.grpc.ServiceGateway - Deadline exceeded on bidirectional stream: service=analytics-service method=StreamEvents clientId=client-bulk-importer elapsed=30001ms deadline=30000ms
+00:00:28:000200 [TRACE] com.example.scheduler.JobRunner - Checkpoint: jobId=send-digest-emails progress=342/466 elapsed=46s rate=7.43emails/s
+00:00:28:001400 [WARN ] com.example.core.InboundMessageReceiver - Large message received: msgId=msg-xl-0001 size=10485760bytes threshold=1048576bytes topic=document.uploads processing_strategy=streaming
+00:00:28:002600 [INFO ] com.example.http.RequestHandler - PUT /api/v1/documents/doc-9f8e 200 OK in 1893ms — docId=doc-9f8e size=10485760 pages=842 indexed=true
+00:00:28:003800 [DEBUG] com.example.auth.TokenValidator - Token revocation processed: tokenId=tok-9b2c1d4e revoked=true revokedAt=2026-02-21T00:28:03Z reason=user_request
+00:00:28:005000 [INFO ] com.example.core.Pinfo - Component=DocumentIndexer status=BUSY indexingDoc=doc-9f8e pages=842 progress=0% estimatedMs=15000
+00:00:29:000100 [WARN ] com.example.db.QueryExecutor - Long-running transaction detected: txId=tx-8f7e6d5c started=2026-02-21T00:28:45Z age=15s waitingOn=lock state=ACTIVE — consider breaking into smaller transactions
+00:00:29:001300 [INFO ] com.example.core.InboundMessageReceiver - Streaming large payload: msgId=msg-xl-0001 chunk=1/10 chunkSize=1048576bytes
+00:00:29:002500 [ERROR] com.example.cache.RedisClient - Redis OOM: COMMAND DENIED. Used memory is greater than maxmemory. maxmemory=512mb used=512mb. — flushing oldest 10% of keys
+00:00:29:003700 [DEBUG] com.example.monitoring.MetricsCollector - Network stats: rx=84.2MB/s tx=31.4MB/s connections=342 established=298 time_wait=44
+00:00:29:004900 [TRACE] com.example.scheduler.JobRunner - Job completed: jobId=send-digest-emails sent=461 failed=5 duration=87s nextRun=2026-02-21T01:00:00Z
+00:00:30:000200 [INFO ] com.example.http.RequestHandler - GET /api/v1/search?q=flash+log+viewer&type=product&page=1 200 OK in 234ms — hits=142 took=212ms
+00:00:30:001400 [INFO ] com.example.core.Pinfo - Component=SearchIndex status=READY indexedDocs=1847231 lastIndexedAt=2026-02-21T00:29:58Z queuedForIndex=3 avgIndexTimeMs=12.4
+00:00:30:002600 [DEBUG] com.example.auth.SessionManager - GC pass: scanned=342 expired=8 active=334 nextGC=300s
+00:00:30:003800 [WARN ] com.example.core.InboundMessageReceiver - Partition 8 has no active consumer: group=flash-consumer-group partition=8 lag=8234 reassigning=true
+00:00:30:005000 [ERROR] com.example.db.QueryExecutor - Unique constraint violation: table=users column=email value=user@example.com error="duplicate key value violates unique constraint users_email_key" query=INSERT INTO users
+00:00:31:000100 [TRACE] com.example.core.InboundMessageReceiver - Partition 8 reassigned: newConsumer=worker-node-1 initialOffset=LATEST lag=8234 catchingUp=true
+00:00:31:001300 [INFO ] com.example.http.RequestHandler - POST /api/v1/users 409 Conflict in 12ms — reason="email already exists" email=user@example.com
+00:00:31:002500 [DEBUG] com.example.db.QueryExecutor - Sequence exhaustion check: seq=order_id_seq current=24000001 max=9223372036854775807 pct_used=0.00%
+00:00:31:003700 [INFO ] com.example.core.Pinfo - Component=DocumentIndexer status=BUSY indexingDoc=doc-9f8e pages=842 progress=45% estimatedMs=8250
+00:00:31:004900 [WARN ] com.example.monitoring.AlertManager - Repeated alert: name=RedisMemoryPressure count=3 in 30min severity=WARNING action=escalate_to_oncall
+00:00:32:000200 [INFO ] com.example.core.InboundMessageReceiver - Catch-up progress: partition=8 lag=6891 initialLag=8234 throughput=460msg/s estimatedCatchUpIn=15s
+00:00:32:001400 [ERROR] com.example.grpc.ServiceGateway - Circuit breaker half-open probe: service=notification-service probe_result=SUCCESS consecutive_success=1 threshold=3 state=HALF_OPEN
+00:00:32:002600 [TRACE] com.example.scheduler.JobRunner - Scheduler heartbeat: uptime=1920s jobsQueued=2 jobsRunning=1 jobsCompleted=151 jobsFailed=1
+00:00:32:003800 [DEBUG] com.example.cache.RedisClient - Post-eviction status: evictedKeys=5120 usedMemory=460MB maxMemory=512MB evictionPolicy=allkeys-lru
+00:00:32:005000 [WARN ] com.example.auth.RateLimiter - IP reputation check: ip=203.0.113.42 score=23/100 threshold=30 action=captcha abuse_type=brute_force
+00:00:33:000100 [INFO ] com.example.http.RequestHandler - GET /api/v1/products/PROD-5678 200 OK in 18ms — cached=true cacheAge=234s ttl=3600s etag="a1b2c3d4e5f6"
+00:00:33:001300 [INFO ] com.example.core.Pinfo - Component=DocumentIndexer status=READY indexingDoc=doc-9f8e pages=842 progress=100% duration=4600ms avgMsPerPage=5.46
+00:00:33:002500 [DEBUG] com.example.db.ConnectionPool - Rebalancing connections: closed=3 opened=3 reason=idle_timeout pool=replica now_healthy=50/50
+00:00:33:003700 [WARN ] com.example.core.InboundMessageReceiver - Schema registry cache miss: subject=order.events-value version=LATEST fetching_from_registry=true
+00:00:33:004900 [ERROR] com.example.payments.StripeClient - Dispute created: chargeId=ch_abc123def456 amount=127.50 reason=fraudulent dueBy=2026-03-14 action=auto_respond_with_evidence
+00:00:34:000200 [TRACE] com.example.core.InboundMessageReceiver - Schema registered: subject=order.events-value version=5 id=42 compatibility=BACKWARD
+00:00:34:001400 [INFO ] com.example.http.RequestHandler - POST /api/v1/disputes/ch_abc123def456/respond 202 Accepted in 123ms — evidenceSubmitted=true documentsAttached=3
+00:00:34:002600 [DEBUG] com.example.auth.TokenValidator - Public key rotation: kid=key-2026-02 algorithm=RS256 valid_from=2026-02-01 expires=2026-03-01 transition_period=true
+00:00:34:003800 [INFO ] com.example.core.InboundMessageReceiver - Partition 8 caught up: lag=0 duration=14s processed=8234msgs throughput=588msg/s
+00:00:34:005000 [WARN ] com.example.db.QueryExecutor - Table bloat detected: table=audit_log dead_tuples=4821342 live_tuples=48213421 bloat_pct=10.0 recommendation=VACUUM FULL during maintenance window
+00:00:35:000100 [INFO ] com.example.core.Pinfo - Component=DisputeManager status=READY openDisputes=1 respondedDisputes=0 wonDisputes=12 lostDisputes=2 totalAtRisk=127.50
+00:00:35:001300 [ERROR] com.example.grpc.ServiceGateway - Circuit breaker half-open probe: service=notification-service probe_result=SUCCESS consecutive_success=2 threshold=3 state=HALF_OPEN
+00:00:35:002500 [TRACE] com.example.scheduler.JobRunner - Waiting for next trigger. sleepingUntil=2026-02-21T00:40:00Z currentTime=2026-02-21T00:35:02Z
+00:00:35:003700 [DEBUG] com.example.monitoring.MetricsCollector - Histogram summary: http_request_duration_ms p50=34 p95=234 p99=892 p999=1893 max=1893 count=8421
+00:00:35:004900 [WARN ] com.example.auth.SessionManager - Unusual location: userId=usr_9b2c1d4e previousCountry=US currentCountry=RO ipAddress=198.51.100.100 action=notify_user
+00:00:36:000200 [INFO ] com.example.http.RequestHandler - GET /api/v1/users/usr_9b2c1d4e/security-events?page=1 200 OK in 23ms — count=3 total=3
+00:00:36:001400 [INFO ] com.example.core.InboundMessageReceiver - Health report: workers=6 active=2 idle=4 errorRate=0.01% throughput=312msg/s queueDepth=12 allHealthy=true
+00:00:36:002600 [DEBUG] com.example.cache.RedisClient - Lua script executed: sha=abc123 args=3 latency=1.1ms result=OK
+00:00:36:003800 [ERROR] com.example.db.QueryExecutor - Foreign key constraint violation: table=order_items column=product_id value=99999 error="insert or update on table order_items violates foreign key constraint order_items_product_id_fkey"
+00:00:36:005000 [TRACE] com.example.core.InboundMessageReceiver - Compaction triggered: topic=order.events partition=3 retention=7days compacted=12421msgs freedBytes=84210432
+00:00:37:000100 [WARN ] com.example.db.ConnectionPool - Slow connection acquisition: thread=thread-pool-6 waited=891ms pool=primary connection_id=conn-0021 acceptable_threshold=100ms
+00:00:37:001300 [INFO ] com.example.core.Pinfo - Component=IntegrityChecker status=READY lastCheckAt=2026-02-21T00:37:00Z violations=0 checkedRecords=48213421 nextCheck=2026-02-21T01:00:00Z
+00:00:37:002500 [INFO ] com.example.http.RequestHandler - POST /api/v1/export/orders?format=csv 202 Accepted in 12ms — exportId=exp-0001 estimatedRows=1247391 estimatedSize=340MB queuePosition=1
+00:00:37:003700 [DEBUG] com.example.auth.TokenValidator - Token expiry distribution: expires_1h=12 expires_24h=142 expires_30d=188 total=342
+00:00:37:004900 [ERROR] com.example.grpc.ServiceGateway - TLS handshake failed: target=external-partner-api:443 error="x509: certificate has expired or is not yet valid" cert_expiry=2026-02-20T23:59:59Z — update certificate immediately!
+00:00:38:000200 [INFO ] com.example.core.InboundMessageReceiver - Export job started: exportId=exp-0001 topic=order.events from=2026-02-14T00:00:00Z to=2026-02-21T00:00:00Z estimatedMessages=1247391
+00:00:38:001400 [TRACE] com.example.scheduler.JobRunner - Export progress: exportId=exp-0001 processed=12421/1247391 pct=1.0% rate=6210rows/s elapsed=2s estimatedRemaining=200s
+00:00:38:002600 [WARN ] com.example.core.InboundMessageReceiver - High redelivery count: topic=order.events partition=1 msgId=msg-bad-payload redeliveries=4 maxRedeliveries=5 — investigate consumer error handling
+00:00:38:003800 [DEBUG] com.example.db.QueryExecutor - Query plan changed: table=orders old_plan=SeqScan new_plan=IndexScan(idx_orders_status) reason=statistics_update improvement=10x
+00:00:38:005000 [INFO ] com.example.core.Pinfo - Component=ExportService status=BUSY exportId=exp-0001 progress=1.0% bytesWritten=4194304 estimatedTotalMb=340
+00:00:39:000100 [WARN ] com.example.monitoring.AlertManager - SLO breach imminent: slo=api_p99_latency current=87ms budget_remaining=7.2% burn_rate=2.4x target=50ms alerting=oncall
+00:00:39:001300 [INFO ] com.example.http.RequestHandler - GET /api/v1/export/exp-0001/status 200 OK in 3ms — status=running progress=1.0% estimatedRemaining=200s
+00:00:39:002500 [ERROR] com.example.grpc.ServiceGateway - Certificate renewal required: service=external-partner-api cert_subject="CN=api.partner.example" expiry=2026-02-20 expired=true action=disabling_integration notified=ops@example.com
+00:00:39:003700 [TRACE] com.example.core.InboundMessageReceiver - Kafka metrics: bytesConsumed=8421MB msgsConsumed=1247391 fetchRate=312.4/s consumerLag=0 partitionCount=10
+00:00:39:004900 [DEBUG] com.example.cache.RedisClient - Keyspace notification received: event=expired key=user:session:sess_old-0001 db=0
+00:00:40:000200 [INFO ] com.example.core.Pinfo - Component=CertificateManager status=WARNING expiredCerts=1 expiring_soon=0 valid=12 criticalIntegrations=0 actionRequired=true
+00:00:40:001400 [WARN ] com.example.auth.RateLimiter - Adaptive rate adjustment: endpoint=/api/v1/search current_rps=142 new_limit=120 reason=latency_budget_pressure
+00:00:40:002600 [INFO ] com.example.http.RequestHandler - SUPER LONG LINE EXAMPLE: This is a very long log line designed to exceed 200 characters to test horizontal scrolling behaviour. It contains many words and details: requestId=req-aabbccdd method=PATCH path=/api/v1/configuration/global/feature-flags/experimental-rendering-engine bodySize=8192 user=admin@example.com timestamp=2026-02-21T00:40:02.626Z clientIp=10.0.0.1 durationMs=1234 status=200
+00:00:40:003800 [DEBUG] com.example.core.InboundMessageReceiver - Event sourcing replay: streamId=orders-stream-1 from=pos:0 to=pos:CURRENT replayed=84231 duration=12340ms avgPerEvent=0.15ms
+00:00:40:005000 [ERROR] com.example.db.ConnectionPool - Pool corruption detected: connectionId=conn-0099 state=POISONED removing_from_pool=true cause="unexpected response from server: UNKNOWN 0x00" pool_size_now=49/50
+00:00:41:000100 [TRACE] com.example.scheduler.JobRunner - Memory snapshot: heapUsed=634MB heapMax=1024MB gcCount=142 gcTimeMs=2340 lastGcAt=2026-02-21T00:40:58Z
+00:00:41:001300 [INFO ] com.example.core.InboundMessageReceiver - Event sourcing replay complete: streamId=orders-stream-1 replayed=84231 errors=0 finalState=CONSISTENT
+00:00:41:002500 [WARN ] com.example.db.QueryExecutor - Checkpoint taking too long: duration=34210ms threshold=30000ms type=FULL pg_wal_size=4.2GB io_util=89%
+00:00:41:003700 [INFO ] com.example.core.Pinfo - Component=ExportService status=BUSY exportId=exp-0001 progress=18.4% bytesWritten=62914560 estimatedTotalMb=340
+00:00:41:004900 [ERROR] com.example.grpc.ServiceGateway - Bulk operation failed: service=notification-service method=SendBulkNotification processed=142 failed=142 error="circuit breaker OPEN" action=queued_for_retry retryAt=2026-02-21T00:45:00Z
+00:00:42:000200 [TRACE] com.example.core.InboundMessageReceiver - Consumer metrics: partition=0 offset=234000 lag=0 partition=1 offset=456000 lag=0 partition=2 offset=123500 lag=0 partition=3 offset=891500 lag=0 all_caught_up=true
+00:00:42:001400 [DEBUG] com.example.auth.SessionManager - JWT decode: alg=RS256 kid=key-2026-02 iss=auth.example.com sub=usr_9b2c1d4e exp=2026-02-21T01:18:00Z iat=2026-02-21T00:18:00Z jti=jwt-unique-id-abc123
+00:00:42:002600 [INFO ] com.example.http.RequestHandler - GET /api/v1/notifications?unread=true 200 OK in 12ms — count=3 types=[location_alert,payment_failed,digest]
+00:00:42:003800 [WARN ] com.example.core.InboundMessageReceiver - Schema evolution detected: subject=user.events-value oldVersion=4 newVersion=5 compatibility=FORWARD fields_added=["last_login_country"] fields_removed=[]
+00:00:42:005000 [INFO ] com.example.core.Pinfo - Component=NotificationService status=STANDBY queuedNotifications=142 willSendWhen=circuit_breaker_closes estimatedAt=2026-02-21T00:45:00Z
+00:00:43:000100 [DEBUG] com.example.monitoring.MetricsCollector - SLO report: slo=api_p99_latency target=50ms measured=87ms compliance=0.985 budget_consumed=1.5% of monthly burn_rate=2.4x
+00:00:43:001300 [ERROR] com.example.db.QueryExecutor - Partition table routing error: table=orders_2026 partition=orders_2026_q1 condition="created_at >= '2026-01-01' AND created_at < '2026-04-01'" error=partition_not_found action=creating_partition
+00:00:43:002500 [TRACE] com.example.scheduler.JobRunner - Acquiring distributed lock: lockName=data-sync-job ttl=300s owner=app-server-01:pid-12345
+00:00:43:003700 [INFO ] com.example.core.InboundMessageReceiver - Partition migration: moving topic=order.events from broker-01 to broker-03 reason=rebalance progress=0% estimatedDuration=120s
+00:00:43:004900 [WARN ] com.example.auth.RateLimiter - Token bucket refill: clientId=client-bulk-importer tokens_added=1000 current_tokens=1000 refill_rate=1000/min
+00:00:44:000200 [INFO ] com.example.http.RequestHandler - PATCH /api/v1/notifications/notif-0001/read 204 No Content in 4ms
+00:00:44:001400 [DEBUG] com.example.cache.RedisClient - Cluster info: nodes=6 masters=3 slaves=3 slots=16384/16384 state=ok clusterEnabled=1 clusterSize=6
+00:00:44:002600 [INFO ] com.example.core.Pinfo - Component=RateLimiter status=READY buckets=842 evictedBuckets=12 globalRPS=4821.4 limitedRequests=3 blockedIPs=1
+00:00:44:003800 [ERROR] com.example.grpc.ServiceGateway - Proto deserialization failed: service=inventory-service method=UpdateStock message_size=0 error="proto: (line 1:0): unknown field name" action=reject_message
+00:00:44:005000 [TRACE] com.example.core.InboundMessageReceiver - Partition migration progress: topic=order.events partition=5 bytesTransferred=124MB totalBytes=840MB progress=14.8% rate=62MB/s
+00:00:45:000100 [INFO ] com.example.core.InboundMessageReceiver - Circuit breaker recovered: service=notification-service state=CLOSED consecutive_successes=3 threshold=3 messages_unblocked=142
+00:00:45:001300 [WARN ] com.example.db.QueryExecutor - Index rebuild required: index=idx_products_category_price bloat=45% live_tuples=1847231 dead_tuples=1512891 recommendation="REINDEX CONCURRENTLY idx_products_category_price"
+00:00:45:002500 [INFO ] com.example.http.RequestHandler - GET /api/v1/export/exp-0001/status 200 OK in 3ms — status=running progress=42.1% estimatedRemaining=115s
+00:00:45:003700 [DEBUG] com.example.auth.TokenValidator - Audience validation: aud=["api.example.com","dashboard.example.com"] requested_aud=api.example.com valid=true
+00:00:45:004900 [ERROR] com.example.payments.StripeClient - Payout failed: accountId=acct_1234567890 amount=9423.50 currency=USD error="This bank account has insufficient funds to cover the payout amount" scheduled_retry=manual
+00:00:46:000200 [TRACE] com.example.scheduler.JobRunner - Distributed lock acquired: lockName=data-sync-job owner=app-server-01 ttl=300s
+00:00:46:001400 [INFO ] com.example.core.Pinfo - Component=PayoutProcessor status=WARNING failed_payouts=1 pending_payouts=3 processedToday=42 totalAmountUSD=184231.50 actionRequired=true
+00:00:46:002600 [DEBUG] com.example.core.InboundMessageReceiver - Consumer group describe: group=flash-consumer-group state=Stable members=3 assignedTopics=3 totalLag=0
+00:00:46:003800 [WARN ] com.example.monitoring.AlertManager - Disk space warning: filesystem=/var/log used=78.4% free=21.6% total=500GB freeGB=108 threshold=80%
+00:00:46:005000 [INFO ] com.example.http.RequestHandler - POST /api/v1/notifications/bulk 202 Accepted in 234ms — count=142 queued=true estimatedDeliveryMs=5000
+00:00:47:000100 [INFO ] com.example.core.InboundMessageReceiver - Notifications dispatched: count=142 success=140 failed=2 avgDeliveryMs=312 failedIds=["notif-0099","notif-0103"]
+00:00:47:001300 [ERROR] com.example.db.ConnectionPool - Connection poisoning detected: conn=conn-0099 was_used_after_error=true rolling_back_pending_txn=true connection_now_closed=true
+00:00:47:002500 [TRACE] com.example.scheduler.JobRunner - Data sync started: syncId=sync-0042 source=db_primary target=analytics_warehouse tables=12 estimatedRows=12847231
+00:00:47:003700 [DEBUG] com.example.cache.RedisClient - Slow command detected: command=LRANGE key=recent_orders args_count=3 duration=142ms threshold=100ms
+00:00:47:004900 [WARN ] com.example.auth.SessionManager - Session store replication lag: primary_writes=342 replica_reads=340 lag_sessions=2 replication_delay=1.2s
+00:00:48:000200 [INFO ] com.example.core.Pinfo - Component=DataSync status=BUSY syncId=sync-0042 progress=0% rowsProcessed=0 estimatedRows=12847231 rate=0rows/s
+00:00:48:001400 [INFO ] com.example.http.RequestHandler - GET /api/v1/export/exp-0001/download 200 OK streaming — exportId=exp-0001 size=143MB status=complete transferring=true
+00:00:48:002600 [DEBUG] com.example.auth.TokenValidator - Rate limit on token introspection: clientId=client-abc123 requests=45/60 per minute window_reset=15s
+00:00:48:003800 [ERROR] com.example.grpc.ServiceGateway - Max retry attempts reached: service=analytics-service method=RecordEvent attempts=5 last_error="resource exhausted" action=drop_event eventId=evt-9f8e7d6c
+00:00:48:005000 [WARN ] com.example.core.InboundMessageReceiver - Backpressure signal sent to producer: producerId=producer-app-01 topic=order.events currentRate=2400msg/s targetRate=1800msg/s
+00:00:49:000100 [TRACE] com.example.scheduler.JobRunner - Sync progress: syncId=sync-0042 table=orders processed=84231/1247391 pct=6.8% rate=84231rows/s elapsed=1s
+00:00:49:001300 [INFO ] com.example.core.Pinfo - Component=DataSync status=BUSY syncId=sync-0042 progress=6.8% rowsProcessed=84231 rate=84231rows/s estimatedRemainingS=14
+00:00:49:002500 [DEBUG] com.example.db.QueryExecutor - Batch insert: table=analytics_warehouse_orders rows=84231 duration=1000ms throughput=84231rows/s conflicts=0
+00:00:49:003700 [WARN ] com.example.auth.RateLimiter - Distributed rate limit sync: nodes=3 lag=12ms synced=true total_tokens_consumed=48712 next_sync=5s
+00:00:49:004900 [INFO ] com.example.http.RequestHandler - WebSocket message: clientId=client-abc123 type=notification subtype=payment_failed payloadSize=342bytes
+00:00:50:000200 [INFO ] com.example.core.InboundMessageReceiver - Producer throttled successfully: producerId=producer-app-01 new_rate=1800msg/s old_rate=2400msg/s lag_now=0
+00:00:50:001400 [ERROR] com.example.payments.StripeClient - Webhook replay attack detected: webhookId=we_replay_001 originalTimestamp=2026-02-21T00:45:00Z replayDetectedAt=2026-02-21T00:50:01Z tolerance=300s action=reject
+00:00:50:002600 [DEBUG] com.example.monitoring.MetricsCollector - Cardinality explosion detected: metric=http_request_duration_seconds labels=2048 threshold=1000 action=dropping_high_cardinality_labels
+00:00:50:003800 [TRACE] com.example.core.InboundMessageReceiver - Final summary: uptime=3000s total_processed=1247391 errors=12 error_rate=0.001% throughput=415.8msg/s
+00:00:50:005000 [INFO ] com.example.core.Pinfo - Component=SystemHealth status=READY allChecks=12 passing=11 failing=1 failingComponent=ExternalPartnerAPI uptimeSeconds=3000 version=2.4.1 build=20260221.0001
