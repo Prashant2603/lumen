@@ -54,10 +54,11 @@ pub fn view<'a>(
             None    => fgp,
         };
         let line_num_str = format!("{:>6}  ", line_num + 1);
-        let truncated: String = if line_text.len() > 200 {
-            format!("{}…", &line_text[..200])
-        } else {
-            line_text.clone()
+        // Use char-based truncation to avoid byte-boundary panics on multi-byte UTF-8
+        let truncated: String = {
+            let mut chars = line_text.chars();
+            let s: String = chars.by_ref().take(200).collect();
+            if chars.next().is_some() { format!("{}…", s) } else { s }
         };
 
         let spans = if let Some(re) = compiled_regex {

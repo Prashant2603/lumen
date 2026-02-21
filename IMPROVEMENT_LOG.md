@@ -321,27 +321,118 @@ Filter layers could show a blue badge, Rewrite yellow, Mask red — making the l
 
 ---
 
+---
+
+## Additional Issues Found (Second-Pass QA Review)
+
+### C-2 — Runtime panic: `results_panel` slices `line_text` by byte index
+
+**Location:** `crates/flash-app/src/views/results_panel.rs:57-58` ✅ FIXED
+
+```rust
+// Before (panics on multi-byte UTF-8 — CJK, emoji, accented chars):
+let truncated: String = if line_text.len() > 200 {
+    format!("{}…", &line_text[..200])  // byte-index slice
+};
+
+// After:
+let mut chars = line_text.chars();
+let s: String = chars.by_ref().take(200).collect();
+if chars.next().is_some() { format!("{}…", s) } else { s }
+```
+
+Any log containing non-ASCII characters longer than 200 bytes (e.g., CJK log messages, emoji-tagged logs, accented service names) would cause a `thread 'main' panicked at 'byte index X is not a char boundary'` crash.
+
+---
+
+### C-3 — Search functionality completely inaccessible from UI ✅ FIXED
+
+**Location:** `crates/flash-app/src/views/filter_bar.rs:57`, `app.rs:893-904`
+
+`search_bar.rs` was removed and the filter bar became the primary input, but the background regex search worker was never wired to it:
+
+- `filter_bar.rs` had `.on_submit(Message::Noop)` — pressing Enter did nothing
+- `tab.search_query` was never set from the filter input; `SearchSubmit` used `search_query` which remained empty
+- The results panel, search highlighting (gold gutter strip, row background), minimap hit markers, and search history were unreachable
+
+**Fix applied:**
+- `LineFilterChanged` now also sets `tab.search_query = query.clone()` to keep both fields in sync
+- Filter bar `on_submit` changed from `Noop` to `SearchSubmit` — pressing Enter now triggers the background regex search worker and populates the results panel
+
+---
+
+### H-5 — Command palette mouse clicks always execute the keyboard-highlighted item ✅ FIXED
+
+**Location:** `crates/flash-app/src/views/command_palette.rs:69-81`
+
+Every palette row button sent `Message::PaletteSelect`. The handler executed `cmds.nth(self.palette_selected)` — the keyboard cursor position. Clicking any row in the palette would run the keyboard-highlighted command instead of the clicked one.
+
+**Fix applied:** Added `Message::PaletteRunIdx(usize)`. Each palette row button now sends `PaletteRunIdx(idx)` which executes that specific row's action directly, independent of keyboard selection.
+
+---
+
+### M-8 — ResultClicked scrolls to wrong position when pipeline filter is active
+
+**Location:** `crates/flash-app/src/app.rs:744-754`
+
+```rust
+Message::ResultClicked(idx) => {
+    ...
+    let target = line_num.saturating_sub(vp / 2);
+    let clamped = virtual_list::clamp_offset(target, tab.total_visible_lines(), vp);
+    tab.scroll_offset = clamped;
+```
+
+`line_num` is the **original file line number** from the search result. `scroll_offset` is an index into `view_rows` (the filtered set). When the pipeline has filtered 5,000 lines to 200 visible rows, clicking a search result from file line 4,500 clamps to view row 200 (last), landing nowhere near the result.
+
+**Fix needed:** Convert `line_num` to a view-row index (scan `view_rows` for the closest `src` to `line_num`) before setting `scroll_offset`.
+
+---
+
+### M-9 — Bookmark navigation (F2) broken when pipeline filter is active
+
+**Location:** `crates/flash-app/src/app.rs:1049-1068`
+
+```rust
+Message::NextBookmark => {
+    let next = sorted.iter().find(|&&b| b > cur).copied().unwrap_or(sorted[0]);
+    let c = self.clamp_scroll(next);
+    if let Some(t) = self.tab_mut() { t.scroll_offset = c; }
+}
+```
+
+`b` is an original file line number from `tab.bookmarks`. `clamp_scroll` clamps to `total_visible_lines()` (view_rows count). Pressing F2 when a pipeline filter is active will clamp to the last visible row, not the bookmarked line's position in the filtered view.
+
+**Fix needed:** Same pattern as M-8 — convert file line → view_row index before scrolling.
+
+---
+
 ## Summary Table
 
-| ID | Severity | Description | File |
-|----|----------|-------------|------|
-| C-1 | 🔴 CRITICAL | CopyLine copies raw bytes, not transformed text | `app.rs` |
-| H-1 | 🟠 HIGH | H-scrollbar decorative only, not clickable | `log_view.rs` |
-| H-2 | 🟠 HIGH | Scroll resets to top on every filter keystroke | `app.rs` |
-| H-3 | 🟠 HIGH | Settings/bookmarks/pipeline not persisted across restarts | app-wide |
-| H-4 | 🟠 HIGH | Ctrl+G jumps to view-row index, not file line number | `app.rs` |
-| M-1 | 🟡 MEDIUM | `scrollbar_hover_y` dual-use; needs `cursor_y` alias | `app.rs` |
-| M-2 | 🟡 MEDIUM | Alternating row stripes discontinuous after filtering | `log_view.rs` |
-| M-3 | 🟡 MEDIUM | Preview status bar says `[>]` but button shows `▶` | `log_view.rs` |
-| M-4 | 🟡 MEDIUM | ClearFilters doesn't stop search worker | `app.rs` |
-| M-5 | 🟡 MEDIUM | `pipeline_w` computed but suppressed with `let _` | `app.rs` |
-| M-6 | 🟡 MEDIUM | No keyboard shortcut for Recent Files | `app.rs` |
-| M-7 | 🟡 MEDIUM | Context menu stays open on scroll | `app.rs` |
-| L-1 | 🟢 LOW | Enter in filter input is a Noop | `filter_bar.rs` |
-| L-2 | 🟢 LOW | Recent button invisible border when closed | `filter_bar.rs` |
-| L-3 | 🟢 LOW | Proc-stats poll fires even with no file open | `app.rs` |
-| L-4 | 🟢 LOW | `tail_mode` global, should be per-tab | `app.rs` |
-| L-5 | 🟢 LOW | No UI/keyboard shortcut to manually reload file (F5) | `app.rs` |
-| L-6 | 🟢 LOW | Minimap click off-by-34px when tab bar shown | `app.rs` |
-| L-7 | 🟢 LOW | Empty pipeline layer still triggers full pipeline run | `app.rs` |
-| L-8 | 🟢 LOW | AddHighlight uses filter query, not search query | `app.rs` |
+| ID | Severity | Status | Description | File |
+|----|----------|--------|-------------|------|
+| C-1 | 🔴 CRITICAL | ✅ Fixed | CopyLine copies raw bytes, not transformed text | `app.rs` |
+| C-2 | 🔴 CRITICAL | ✅ Fixed | Byte-index slice panic on multi-byte UTF-8 in results panel | `results_panel.rs` |
+| C-3 | 🔴 CRITICAL | ✅ Fixed | Search worker completely inaccessible from UI | `filter_bar.rs`, `app.rs` |
+| H-1 | 🟠 HIGH | Open | H-scrollbar decorative only, not clickable | `log_view.rs` |
+| H-2 | 🟠 HIGH | ✅ Fixed | Scroll resets to top on every filter keystroke | `app.rs` |
+| H-3 | 🟠 HIGH | Open | Settings/bookmarks/pipeline not persisted across restarts | app-wide |
+| H-4 | 🟠 HIGH | Open | Ctrl+G jumps to view-row index, not file line number | `app.rs` |
+| H-5 | 🟠 HIGH | ✅ Fixed | Palette mouse clicks run keyboard-highlighted item | `command_palette.rs` |
+| M-1 | 🟡 MEDIUM | Open | `scrollbar_hover_y` dual-use; needs `cursor_y` alias | `app.rs` |
+| M-2 | 🟡 MEDIUM | ✅ Fixed | Alternating row stripes discontinuous after filtering | `log_view.rs` |
+| M-3 | 🟡 MEDIUM | ✅ Fixed | Preview status bar says `[>]` but button shows `▶` | `log_view.rs` |
+| M-4 | 🟡 MEDIUM | Open | ClearFilters doesn't stop search worker | `app.rs` |
+| M-5 | 🟡 MEDIUM | Open | `pipeline_w` computed but suppressed with `let _` | `app.rs` |
+| M-6 | 🟡 MEDIUM | ✅ Fixed | No keyboard shortcut (Ctrl+R) for Recent Files | `app.rs` |
+| M-7 | 🟡 MEDIUM | ✅ Fixed | Context menu stays open on scroll | `app.rs` |
+| M-8 | 🟡 MEDIUM | Open | ResultClicked scrolls to wrong position with pipeline filter | `app.rs` |
+| M-9 | 🟡 MEDIUM | Open | F2 bookmark navigation broken with pipeline filter | `app.rs` |
+| L-1 | 🟢 LOW | ✅ Fixed | Enter in filter input now triggers search (was Noop) | `filter_bar.rs` |
+| L-2 | 🟢 LOW | ✅ Fixed | Recent button invisible border when closed | `filter_bar.rs` |
+| L-3 | 🟢 LOW | ✅ Fixed | Proc-stats poll fires even with no file open | `app.rs` |
+| L-4 | 🟢 LOW | Open | `tail_mode` global, should be per-tab | `app.rs` |
+| L-5 | 🟢 LOW | ✅ Fixed | No UI/keyboard shortcut to manually reload file (F5) | `app.rs` |
+| L-6 | 🟢 LOW | Open | Minimap click off-by-34px when tab bar shown | `app.rs` |
+| L-7 | 🟢 LOW | Open | Empty pipeline layer still triggers full pipeline run | `app.rs` |
+| L-8 | 🟢 LOW | Open | AddHighlight uses filter query, not search query | `app.rs` |

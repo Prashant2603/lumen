@@ -318,6 +318,7 @@ pub enum Message {
     PaletteQueryChanged(String),
     PaletteMove(i32),
     PaletteSelect,
+    PaletteRunIdx(usize), // mouse-click on a specific palette row
     // Tabs
     CloseTab(usize),
     SwitchTab(usize),
@@ -909,6 +910,8 @@ impl App {
                     let is_regex = self.filter_is_regex;
                     let Some(tab) = self.tab_mut() else { return Task::none(); };
                     tab.line_filter_query = query.clone();
+                    // Keep search_query in sync so pressing Enter triggers a search on this text
+                    tab.search_query = query.clone();
                     tab.filter_regex = if is_regex && !query.is_empty() {
                         regex::Regex::new(&query).ok()
                     } else { None };
@@ -1022,6 +1025,15 @@ impl App {
                 let cmds = self.filtered_palette_cmds();
                 let sel  = self.palette_selected.min(cmds.len().saturating_sub(1));
                 if let Some(cmd) = cmds.into_iter().nth(sel) {
+                    let action = cmd.action;
+                    self.palette_open = false; self.palette_query.clear(); self.palette_selected = 0;
+                    return self.update(action);
+                }
+            }
+            Message::PaletteRunIdx(idx) => {
+                // Mouse-click on a specific row — run that row's action regardless of keyboard selection
+                let cmds = self.filtered_palette_cmds();
+                if let Some(cmd) = cmds.into_iter().nth(idx) {
                     let action = cmd.action;
                     self.palette_open = false; self.palette_query.clear(); self.palette_selected = 0;
                     return self.update(action);

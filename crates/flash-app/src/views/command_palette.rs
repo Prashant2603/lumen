@@ -67,7 +67,7 @@ pub fn view<'a>(
         });
 
         let btn = button(row_widget)
-            .on_press(Message::PaletteSelect)
+            .on_press(Message::PaletteRunIdx(idx))  // run the clicked row, not the keyboard selection
             .padding(0)
             .width(Length::Fill)
             .style(move |_: &iced::Theme, status| button::Style {

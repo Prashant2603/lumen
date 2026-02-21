@@ -54,7 +54,7 @@ pub fn view<'a>(
     let placeholder = if filter_is_regex { "regex filter…" } else { "filter…  (click .* for regex)" };
     let filter_input = text_input(placeholder, line_filter)
         .on_input(Message::LineFilterChanged)
-        .on_submit(Message::Noop)
+        .on_submit(Message::SearchSubmit)  // Enter runs background regex search + populates results panel
         .padding([6, 10])
         .size(13)
         .width(Length::Fill)
