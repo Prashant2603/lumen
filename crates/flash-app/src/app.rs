@@ -3,15 +3,18 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use flash_core::{
-    spawn_search_worker, FileMap, LineIndex, LineReader, SearchHandle, SearchResponse,
+    spawn_pipeline_worker, spawn_search_worker, FileMap, LineIndex, LineReader,
+    PipelineHandle, PipelineResponse, SearchHandle, SearchResponse,
 };
 use iced::keyboard::{self, Key};
-use iced::widget::{column, container, stack, text};
+use iced::widget::{column, container, row, stack, text, text_input};
 use iced::{event, mouse, window};
 use iced::{Color, Element, Length, Subscription, Task, Theme};
 
 use notify::Watcher as _;
+use sysinfo::{ProcessesToUpdate, System as SysInfo};
 
+use crate::pipeline::TransformPipeline;
 use crate::theme::{self, AppTheme, Palette};
 use crate::views;
 use crate::widgets::virtual_list;
@@ -24,6 +27,26 @@ pub const HIGHLIGHT_COLORS: [Color; 4] = [
     Color { r: 0.30, g: 0.85, b: 0.90, a: 1.0 }, // cyan
     Color { r: 0.93, g: 0.63, b: 0.35, a: 1.0 }, // amber
 ];
+
+// ── ViewRow ───────────────────────────────────────────────────────────────────
+
+/// A row in the virtual-scroll view.
+#[derive(Debug, Clone)]
+pub enum ViewRow {
+    /// A regular line from the filtered set (by original index).
+    Line(usize),
+    /// A context line shown around an expanded anchor line.
+    ContextLine { src: usize, anchor: usize },
+}
+
+impl ViewRow {
+    pub fn src(&self) -> usize {
+        match self {
+            ViewRow::Line(n)                    => *n,
+            ViewRow::ContextLine { src, .. } => *src,
+        }
+    }
+}
 
 // ── Structs ───────────────────────────────────────────────────────────────────
 
@@ -55,11 +78,21 @@ pub struct Tab {
     pub line_offsets_arc:      Arc<Vec<u64>>,
     pub hidden_levels:         HashSet<flash_core::LogLevel>,
     pub line_filter_query:     String,
-    pub active_line_filter:    Option<Vec<usize>>,
     pub selected_line:         Option<usize>,
-    // New
+    // Bookmarks
     pub bookmarks:             HashSet<usize>,
     pub extra_highlights:      Vec<ExtraHighlight>,
+    // Pipeline
+    pub pipeline:              TransformPipeline,
+    pub pipeline_handle:       PipelineHandle,
+    pub pipeline_stale:        bool,
+    pub pipeline_open:         bool,
+    pub view_rows:             Vec<ViewRow>,
+    pub last_pipeline_output:  Vec<usize>,
+    pub context_expanded:      HashSet<usize>,
+    pub jump_source_line:      Option<usize>,
+    pub pipeline_preview_to:   Option<u64>,   // layer id up to which we preview
+    pub filter_regex:          Option<regex::Regex>, // compiled filter regex (when regex mode on)
 }
 
 impl Tab {
@@ -68,8 +101,13 @@ impl Tab {
     }
     pub fn total_lines(&self) -> usize { self.open_file.line_index.line_count() }
     pub fn total_visible_lines(&self) -> usize {
-        self.active_line_filter.as_ref().map(|f| f.len()).unwrap_or_else(|| self.total_lines())
+        if self.jump_source_line.is_some() {
+            self.total_lines()
+        } else {
+            self.view_rows.len()
+        }
     }
+
     pub fn clear_search(&mut self) {
         self.search_handle.cancel();
         self.search_query.clear();
@@ -79,26 +117,81 @@ impl Tab {
         self.search_in_progress  = false;
         self.compiled_search_regex = None;
     }
-    pub fn rebuild_line_filter(&mut self) {
-        let active = !self.hidden_levels.is_empty() || !self.line_filter_query.is_empty();
-        if !active { self.active_line_filter = None; self.scroll_offset = 0; return; }
-        let reader      = LineReader::new(self.file_data_arc.as_ref().as_ref(), &self.open_file.line_index);
-        let total       = reader.line_count();
-        let q_lower     = self.line_filter_query.to_lowercase();
-        let mut indices = Vec::new();
-        for i in 0..total {
-            if let Some(line) = reader.get_line(i) {
-                if !self.hidden_levels.is_empty() {
+
+    /// Apply quick text filter (hidden_levels + line_filter_query) to the
+    /// pipeline output, expand context, and store in view_rows.
+    pub fn rebuild_view_rows_from_filter(&mut self, filtered: Vec<usize>) {
+        // Borrow individual fields to avoid capturing `self` in closure
+        let data: &[u8]       = self.file_data_arc.as_ref().as_ref();
+        let line_index        = &self.open_file.line_index;
+        let reader            = LineReader::new(data, line_index);
+        let q_lower           = self.line_filter_query.to_lowercase();
+        let hidden_levels     = &self.hidden_levels;
+        let filter_regex      = &self.filter_regex;
+
+        let post_quick: Vec<usize> = filtered.into_iter().filter(|&i| {
+            if !hidden_levels.is_empty() {
+                if let Some(line) = reader.get_line(i) {
                     if let Some(lvl) = flash_core::LogLevel::detect(line) {
-                        if self.hidden_levels.contains(&lvl) { continue; }
+                        if hidden_levels.contains(&lvl) { return false; }
                     }
                 }
-                if !q_lower.is_empty() && !line.to_lowercase().contains(&q_lower) { continue; }
-                indices.push(i);
+            }
+            if !q_lower.is_empty() {
+                if let Some(line) = reader.get_line(i) {
+                    if let Some(re) = filter_regex {
+                        if !re.is_match(line) { return false; }
+                    } else {
+                        if !line.to_lowercase().contains(&q_lower) { return false; }
+                    }
+                }
+            }
+            true
+        }).collect();
+
+        let total = self.open_file.line_index.line_count();
+        // Clone context_expanded to avoid borrow conflict when writing view_rows
+        let context_expanded = self.context_expanded.clone();
+        self.view_rows    = Self::expand_with_context(&post_quick, &context_expanded, total);
+        self.scroll_offset = 0;
+    }
+
+    fn expand_with_context(
+        filtered: &[usize],
+        expanded: &HashSet<usize>,
+        total:    usize,
+    ) -> Vec<ViewRow> {
+        if expanded.is_empty() {
+            return filtered.iter().map(|&src| ViewRow::Line(src)).collect();
+        }
+
+        const CTX: usize = 5;
+        let filtered_set: HashSet<usize> = filtered.iter().copied().collect();
+
+        // Collect (sort_key, ViewRow) pairs, deduplicated
+        let mut order: Vec<(usize, ViewRow)> = Vec::new();
+        let mut emitted: HashSet<usize>      = HashSet::new();
+
+        for &anchor in filtered {
+            if expanded.contains(&anchor) {
+                let start = anchor.saturating_sub(CTX);
+                let end   = (anchor + CTX + 1).min(total);
+                for src in start..end {
+                    if emitted.insert(src) {
+                        if src == anchor || filtered_set.contains(&src) {
+                            order.push((src, ViewRow::Line(src)));
+                        } else {
+                            order.push((src, ViewRow::ContextLine { src, anchor }));
+                        }
+                    }
+                }
+            } else if emitted.insert(anchor) {
+                order.push((anchor, ViewRow::Line(anchor)));
             }
         }
-        self.scroll_offset      = 0;
-        self.active_line_filter = Some(indices);
+
+        order.sort_by_key(|(k, _)| *k);
+        order.into_iter().map(|(_, row)| row).collect()
     }
 }
 
@@ -119,10 +212,15 @@ pub struct App {
     // Modifier key tracking
     modifiers: iced::keyboard::Modifiers,
     // Theme / settings
-    app_theme:     AppTheme,
-    settings_open: bool,
+    app_theme:       AppTheme,
+    settings_open:   bool,
+    info_panel_open: bool,
     // Line wrap
     pub line_wrap: bool,
+    // Filter regex mode
+    pub filter_is_regex:    bool,
+    // Color lines by log level
+    pub color_log_levels:   bool,
     // Jump to line modal
     jump_open:  bool,
     jump_input: String,
@@ -130,13 +228,22 @@ pub struct App {
     palette_open:     bool,
     palette_query:    String,
     palette_selected: usize,
-    // Search history (#6)
+    // Search history
     search_history:     Vec<String>,
     history_cursor:     Option<usize>,
     history_temp_query: String,
-    // Recent files (#13)
+    // Recent files
     recent_files: Vec<PathBuf>,
-    // Tail mode / file watching (#7 / #8)
+    recent_files_open: bool,
+    // Process stats (CPU / memory shown in info panel)
+    sysinfo_sys:  SysInfo,
+    proc_mem_mb:  f64,
+    proc_cpu_pct: f64,
+    // Cursor position (x,y) for context menu placement
+    cursor_x: f32,
+    // Right-click context menu
+    context_menu_line: Option<usize>,
+    // Tail mode / file watching
     tail_mode: bool,
     _watcher:  Option<notify::RecommendedWatcher>,
     watch_rx:  Option<std::sync::mpsc::Receiver<notify::Result<notify::Event>>>,
@@ -175,10 +282,12 @@ pub enum Message {
     // Scrollbar
     ScrollbarClicked,
     ScrollbarReleased,
-    CursorMoved(f32),
+    CursorMoved(f32, f32),   // x, y
     // Filters
     ToggleLevelFilter(flash_core::LogLevel),
     LineFilterChanged(String),
+    ToggleFilterRegex,
+    ToggleColorLogLevels,
     ClearFilters,
     // Zoom
     ZoomIn,
@@ -208,19 +317,46 @@ pub enum Message {
     // Tabs
     CloseTab(usize),
     SwitchTab(usize),
-    // Bookmarks (#9)
+    // Bookmarks
     ToggleBookmark(usize),
     NextBookmark,
     PrevBookmark,
-    // Search history (#6)
+    // Search history
     HistoryPrev,
     HistoryNext,
-    // Tail mode / file watching (#7 / #8)
+    // Tail mode / file watching
     TailToggle,
     PollFileChange,
-    // Extra highlights (#12)
+    // Extra highlights
     AddHighlight,
     RemoveHighlight(usize),
+    // Right info panel
+    ToggleInfoPanel,
+    // Process stats update
+    UpdateProcStats,
+    // Recent files panel
+    ToggleRecentFiles,
+    // Right-click context menu
+    RightClickLine(usize),
+    CloseContextMenu,
+    CopyContextLine,
+    // Pipeline
+    TogglePipeline,
+    PipelinePreviewLayer(Option<u64>),  // None = clear preview
+    PipelineAddFilter,
+    PipelineAddRewrite,
+    PipelineAddMask,
+    PipelineRemoveLayer(u64),
+    PipelineToggleLayer(u64),
+    PipelineToggleLayerExclude(u64),
+    PipelineMoveLayer(u64, i32),       // -1 = up, +1 = down
+    PipelineEditPattern(u64, String),
+    PipelineEditExtra(u64, String),
+    PipelineCommitLayer(u64),          // Enter/Apply — validate regex, trigger pipeline
+    PollPipeline,
+    ToggleContext(usize),              // toggle context expansion for anchor line
+    JumpToSource(usize),              // bypass pipeline, show raw line
+    JumpToSourceClear,                // return to pipeline view
     Noop,
 }
 
@@ -235,11 +371,14 @@ impl App {
             window_height:      900.0,
             scrollbar_hover_y:  0.0,
             scrollbar_dragging: false,
-            font_size:          13.0,
+            font_size:          16.0,
             modifiers:          iced::keyboard::Modifiers::default(),
             app_theme:          AppTheme::CatppuccinMocha,
             settings_open:      false,
+            info_panel_open:    true,
             line_wrap:          false,
+            filter_is_regex:    false,
+            color_log_levels:   false,
             jump_open:          false,
             jump_input:         String::new(),
             palette_open:       false,
@@ -248,7 +387,13 @@ impl App {
             search_history:     Vec::new(),
             history_cursor:     None,
             history_temp_query: String::new(),
-            recent_files:       Vec::new(),
+            recent_files:       load_recent_files(),
+            recent_files_open:  false,
+            sysinfo_sys:        SysInfo::new(),
+            proc_mem_mb:        0.0,
+            proc_cpu_pct:       0.0,
+            cursor_x:           0.0,
+            context_menu_line:  None,
             tail_mode:          false,
             _watcher:           None,
             watch_rx:           None,
@@ -275,7 +420,10 @@ impl App {
 
     fn recalc_viewport(&mut self) {
         let sep_h    = if self.tabs.len() > 1 { 34.0_f32 } else { 1.0 };
-        let overhead = 47.0 + sep_h + 28.0 + 24.0;
+        let pipeline_w = self.tab().map(|t| if t.pipeline_open { 260.0_f32 } else { 0.0 }).unwrap_or(0.0);
+        let _ = pipeline_w; // used implicitly through window_height
+        // search_bar removed; filter_bar (~38px) + status_bar (24px) + separator
+        let overhead = sep_h + 38.0 + 24.0;
         let available = (self.window_height - overhead).max(100.0);
         self.viewport_lines = virtual_list::visible_lines_for_font(available, self.font_size);
         if let Some(tab) = self.tabs.get_mut(self.active_tab) {
@@ -286,7 +434,7 @@ impl App {
     }
 
     fn scroll_to_cursor_y(&mut self) {
-        let toolbar_h: f32 = 47.0;
+        let toolbar_h: f32 = 38.0;  // filter_bar height (search_bar removed)
         let status_h:  f32 = 24.0;
         let results_h: f32 = self.tab()
             .map(|t| if t.search_results.is_empty() && !t.search_in_progress { 0.0 } else { 226.0 })
@@ -302,7 +450,6 @@ impl App {
         }
     }
 
-    /// Set up a file watcher for the active tab's file.
     fn setup_watcher(&mut self) {
         drop(self.watch_rx.take());
         drop(self._watcher.take());
@@ -330,6 +477,26 @@ impl App {
         self.search_history.truncate(50);
     }
 
+    /// Trigger a pipeline run (or bypass if no filter layers). Clears any stage preview.
+    fn trigger_pipeline(&mut self) {
+        {
+            let Some(tab) = self.tab_mut() else { return; };
+            tab.pipeline_preview_to = None;   // editing a layer exits preview mode
+            if !tab.pipeline.has_active_filter_layers() {
+                // No filter layers — all lines pass
+                let all: Vec<usize> = (0..tab.total_lines()).collect();
+                tab.last_pipeline_output = all.clone();
+                tab.rebuild_view_rows_from_filter(all);
+                tab.pipeline_stale = false;
+            } else {
+                let config = tab.pipeline.to_config();
+                tab.pipeline_handle.run(config);
+                tab.pipeline_stale = true;
+            }
+        }
+        self.recalc_viewport();
+    }
+
     // ── Command palette ───────────────────────────────────────────────────────
 
     fn all_palette_cmds(&self) -> Vec<PaletteCmd> {
@@ -341,6 +508,7 @@ impl App {
             PaletteCmd { label: "Open File".into(),          shortcut: "Ctrl+O", action: Message::FileOpen },
             PaletteCmd { label: "Jump to Line".into(),       shortcut: "Ctrl+G", action: Message::JumpOpen },
             PaletteCmd { label: "Toggle Settings".into(),    shortcut: "",       action: Message::ToggleSettings },
+            PaletteCmd { label: "Toggle Info Panel".into(),  shortcut: "",       action: Message::ToggleInfoPanel },
             PaletteCmd { label: "Zoom In".into(),            shortcut: "Ctrl++", action: Message::ZoomIn },
             PaletteCmd { label: "Zoom Out".into(),           shortcut: "Ctrl+-", action: Message::ZoomOut },
             PaletteCmd { label: "Reset Zoom".into(),         shortcut: "Ctrl+0", action: Message::ZoomReset },
@@ -350,6 +518,7 @@ impl App {
             PaletteCmd { label: "Go to Bottom".into(),       shortcut: "End",    action: Message::GoToBottom },
             PaletteCmd { label: "Next Bookmark".into(),      shortcut: "F2",     action: Message::NextBookmark },
             PaletteCmd { label: "Prev Bookmark".into(),      shortcut: "⇧F2",    action: Message::PrevBookmark },
+            PaletteCmd { label: "Toggle Pipeline".into(),    shortcut: "",       action: Message::TogglePipeline },
         ];
         if has_file {
             cmds.push(PaletteCmd { label: "Clear Search & Filters".into(), shortcut: "", action: Message::Clear });
@@ -359,7 +528,6 @@ impl App {
         for &t in AppTheme::all() {
             cmds.push(PaletteCmd { label: format!("Theme: {}", t.name()), shortcut: "", action: Message::SetTheme(t) });
         }
-        // Recent files (#13)
         for path in self.recent_files.iter().take(10) {
             let name = path.file_name().unwrap_or_default().to_string_lossy().to_string();
             cmds.push(PaletteCmd {
@@ -368,7 +536,6 @@ impl App {
                 action:   Message::FileDrop(path.clone()),
             });
         }
-        // Search history (#6)
         for q in self.search_history.iter().take(10) {
             cmds.push(PaletteCmd {
                 label:    format!("History: {}", q),
@@ -391,7 +558,7 @@ impl App {
     pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
 
-            // ── File open / drop (#14) ────────────────────────────────────────
+            // ── File open / drop ──────────────────────────────────────────────
             Message::FileOpen => {
                 return Task::perform(
                     async {
@@ -419,17 +586,17 @@ impl App {
                     if let Some(tab) = build_tab(path.clone(), gz_data) {
                         self.tabs.push(tab);
                         self.active_tab = self.tabs.len() - 1;
-                        // Recent files (#13)
                         self.recent_files.retain(|p| p != &path);
                         self.recent_files.insert(0, path);
                         self.recent_files.truncate(10);
+                        save_recent_files(&self.recent_files);
                         self.setup_watcher();
                         self.recalc_viewport();
                     }
                 }
             }
 
-            // ── File reload (tail mode / #7 #8) ──────────────────────────────
+            // ── File reload ───────────────────────────────────────────────────
             Message::ReloadActiveFile => {
                 let Some(tab) = self.tab() else { return Task::none(); };
                 let path = tab.open_file.path.clone();
@@ -451,20 +618,28 @@ impl App {
                 for i in 0..=line_count { if let Some(o) = line_index.offset(i) { offsets.push(o); } }
                 let file_len = data_arc.as_ref().as_ref().len() as u64;
                 if offsets.last().copied() != Some(file_len) { offsets.push(file_len); }
-                let offsets_arc   = Arc::new(offsets);
-                let search_handle = spawn_search_worker(data_arc.clone(), offsets_arc.clone());
+                let offsets_arc      = Arc::new(offsets);
+                let search_handle    = spawn_search_worker(data_arc.clone(), offsets_arc.clone());
+                let pipeline_handle  = spawn_pipeline_worker(data_arc.clone(), offsets_arc.clone());
                 tab.search_handle.cancel();
                 tab.open_file         = OpenFile { file_map, line_index, path };
                 tab.file_data_arc     = data_arc;
                 tab.line_offsets_arc  = offsets_arc;
                 tab.search_handle     = search_handle;
+                tab.pipeline_handle   = pipeline_handle;
                 tab.search_results.clear();
                 tab.search_result_set.clear();
                 tab.selected_result   = None;
                 tab.search_in_progress = false;
                 tab.compiled_search_regex = None;
-                tab.active_line_filter = None;
-                // Re-run the search if there was one
+                // Reset pipeline view state
+                tab.context_expanded.clear();
+                tab.jump_source_line = None;
+                let all: Vec<usize> = (0..line_count).collect();
+                tab.last_pipeline_output = all.clone();
+                tab.view_rows = all.iter().map(|&i| ViewRow::Line(i)).collect();
+                tab.pipeline_stale = false;
+                // Re-run search if there was one
                 if !tab.search_query.is_empty() {
                     tab.compiled_search_regex = regex::Regex::new(&tab.search_query).ok();
                     let q = tab.search_query.clone();
@@ -475,10 +650,12 @@ impl App {
                 if self.tail_mode {
                     self.tabs[ai].scroll_offset = total.saturating_sub(self.viewport_lines);
                 }
+                // Re-trigger pipeline if there are filter layers
+                self.trigger_pipeline();
                 self.recalc_viewport();
             }
 
-            // ── Tail mode / file watching (#7 / #8) ──────────────────────────
+            // ── Tail mode / file watching ─────────────────────────────────────
             Message::TailToggle => {
                 self.tail_mode = !self.tail_mode;
                 if self.tail_mode { return self.update(Message::GoToBottom); }
@@ -540,7 +717,6 @@ impl App {
                 self.history_cursor = None;
             }
             Message::PollSearchResults => {
-                // Poll ALL searching tabs so background searches continue when tab is not active
                 for tab in &mut self.tabs {
                     if !tab.search_in_progress { continue; }
                     for resp in tab.search_handle.try_recv_all() {
@@ -571,13 +747,15 @@ impl App {
 
             // ── Clear ────────────────────────────────────────────────────────
             Message::Clear => {
-                if let Some(tab) = self.tab_mut() {
+                {
+                    let Some(tab) = self.tab_mut() else { return Task::none(); };
                     tab.clear_search();
-                    tab.scroll_offset      = 0;
+                    tab.scroll_offset     = 0;
                     tab.hidden_levels.clear();
                     tab.line_filter_query.clear();
-                    tab.active_line_filter = None;
-                    tab.selected_line      = None;
+                    tab.selected_line     = None;
+                    let output = tab.last_pipeline_output.clone();
+                    tab.rebuild_view_rows_from_filter(output);
                 }
                 self.history_cursor = None;
                 self.history_temp_query.clear();
@@ -589,8 +767,16 @@ impl App {
                 let reader = LineReader::new(tab.file_data_arc.as_ref().as_ref(), &tab.open_file.line_index);
                 let text = if !tab.search_results.is_empty() {
                     tab.search_results.iter().map(|(_, t)| t.as_str()).collect::<Vec<_>>().join("\n")
-                } else if let Some(filter) = &tab.active_line_filter {
-                    filter.iter().filter_map(|&i| reader.get_line(i)).collect::<Vec<_>>().join("\n")
+                } else if !tab.view_rows.is_empty() {
+                    tab.view_rows.iter()
+                        .filter_map(|row| {
+                            if let ViewRow::Line(i) = row {
+                                reader.get_line(*i)
+                            } else {
+                                None
+                            }
+                        })
+                        .collect::<Vec<_>>().join("\n")
                 } else {
                     (0..reader.line_count()).filter_map(|i| reader.get_line(i)).collect::<Vec<_>>().join("\n")
                 };
@@ -651,7 +837,12 @@ impl App {
                     } else if self.settings_open {
                         self.settings_open = false;
                     } else if let Some(t) = self.tab_mut() {
-                        t.selected_line = None;
+                        if t.jump_source_line.is_some() {
+                            t.jump_source_line = None;
+                            let _ = self.recalc_viewport();
+                        } else {
+                            t.selected_line = None;
+                        }
                     }
                 }
                 Key::Character(c) if modifiers.control() => match c.as_str() {
@@ -659,7 +850,6 @@ impl App {
                     "-"       => return self.update(Message::ZoomOut),
                     "0"       => return self.update(Message::ZoomReset),
                     "b"       => {
-                        // Ctrl+B: toggle bookmark on selected line
                         if let Some(n) = self.tab().and_then(|t| t.selected_line) {
                             return self.update(Message::ToggleBookmark(n));
                         }
@@ -676,44 +866,73 @@ impl App {
             // ── Scrollbar ────────────────────────────────────────────────────
             Message::ScrollbarClicked => { self.scrollbar_dragging = true; self.scroll_to_cursor_y(); }
             Message::ScrollbarReleased => { self.scrollbar_dragging = false; }
-            Message::CursorMoved(y) => {
+            Message::CursorMoved(x, y) => {
+                self.cursor_x = x;
                 self.scrollbar_hover_y = y;
                 if self.scrollbar_dragging { self.scroll_to_cursor_y(); }
             }
 
             // ── Filters ──────────────────────────────────────────────────────
             Message::ToggleLevelFilter(level) => {
-                let Some(tab) = self.tab_mut() else { return Task::none(); };
-                if tab.hidden_levels.contains(&level) { tab.hidden_levels.remove(&level); }
-                else { tab.hidden_levels.insert(level); }
-                tab.rebuild_line_filter();
+                {
+                    let Some(tab) = self.tab_mut() else { return Task::none(); };
+                    if tab.hidden_levels.contains(&level) { tab.hidden_levels.remove(&level); }
+                    else { tab.hidden_levels.insert(level); }
+                    let output = tab.last_pipeline_output.clone();
+                    tab.rebuild_view_rows_from_filter(output);
+                }
                 self.recalc_viewport();
             }
             Message::LineFilterChanged(query) => {
-                let Some(tab) = self.tab_mut() else { return Task::none(); };
-                tab.line_filter_query = query;
-                tab.rebuild_line_filter();
+                {
+                    let is_regex = self.filter_is_regex;
+                    let Some(tab) = self.tab_mut() else { return Task::none(); };
+                    tab.line_filter_query = query.clone();
+                    tab.filter_regex = if is_regex && !query.is_empty() {
+                        regex::Regex::new(&query).ok()
+                    } else { None };
+                    let output = tab.last_pipeline_output.clone();
+                    tab.rebuild_view_rows_from_filter(output);
+                }
+                self.recalc_viewport();
+            }
+            Message::ToggleFilterRegex => {
+                self.filter_is_regex = !self.filter_is_regex;
+                let is_regex = self.filter_is_regex;
+                {
+                    let Some(tab) = self.tab_mut() else { return Task::none(); };
+                    tab.filter_regex = if is_regex && !tab.line_filter_query.is_empty() {
+                        regex::Regex::new(&tab.line_filter_query).ok()
+                    } else { None };
+                    let output = tab.last_pipeline_output.clone();
+                    tab.rebuild_view_rows_from_filter(output);
+                }
                 self.recalc_viewport();
             }
             Message::ClearFilters => {
-                let Some(tab) = self.tab_mut() else { return Task::none(); };
-                tab.hidden_levels.clear();
-                tab.line_filter_query.clear();
-                tab.active_line_filter = None;
-                tab.scroll_offset      = 0;
+                {
+                    let Some(tab) = self.tab_mut() else { return Task::none(); };
+                    tab.hidden_levels.clear();
+                    tab.line_filter_query.clear();
+                    tab.filter_regex = None;
+                    let output = tab.last_pipeline_output.clone();
+                    tab.rebuild_view_rows_from_filter(output);
+                }
                 self.recalc_viewport();
             }
 
             // ── Zoom ─────────────────────────────────────────────────────────
             Message::ZoomIn    => { self.font_size = (self.font_size + 1.0).min(28.0); self.recalc_viewport(); }
             Message::ZoomOut   => { self.font_size = (self.font_size - 1.0).max(8.0);  self.recalc_viewport(); }
-            Message::ZoomReset => { self.font_size = 13.0; self.recalc_viewport(); }
+            Message::ZoomReset => { self.font_size = 16.0; self.recalc_viewport(); }
             Message::ModifiersChanged(mods) => { self.modifiers = mods; }
 
             // ── Theme / settings ─────────────────────────────────────────────
-            Message::SetTheme(t)    => { self.app_theme = t; }
-            Message::ToggleSettings => { self.settings_open = !self.settings_open; }
-            Message::WrapToggle     => { self.line_wrap = !self.line_wrap; }
+            Message::SetTheme(t)     => { self.app_theme = t; }
+            Message::ToggleSettings  => { self.settings_open = !self.settings_open; }
+            Message::ToggleInfoPanel => { self.info_panel_open = !self.info_panel_open; }
+            Message::WrapToggle          => { self.line_wrap = !self.line_wrap; self.recalc_viewport(); }
+            Message::ToggleColorLogLevels => { self.color_log_levels = !self.color_log_levels; }
 
             // ── Line selection ────────────────────────────────────────────────
             Message::LineClicked(n) => {
@@ -734,7 +953,11 @@ impl App {
 
             // ── Jump to line ─────────────────────────────────────────────────
             Message::JumpOpen => {
-                if !self.tabs.is_empty() { self.jump_open = true; self.jump_input.clear(); }
+                if !self.tabs.is_empty() {
+                    self.jump_open = true;
+                    self.jump_input.clear();
+                    return text_input::focus(text_input::Id::new("jump_input"));
+                }
             }
             Message::JumpInputChanged(s) => { self.jump_input = s; }
             Message::JumpSubmit => {
@@ -750,6 +973,7 @@ impl App {
             // ── Command palette ──────────────────────────────────────────────
             Message::PaletteOpen => {
                 self.palette_open = true; self.palette_query.clear(); self.palette_selected = 0;
+                return text_input::focus(text_input::Id::new("palette_input"));
             }
             Message::PaletteClose => {
                 self.palette_open = false; self.palette_query.clear(); self.palette_selected = 0;
@@ -782,6 +1006,7 @@ impl App {
             Message::CloseTab(idx) => {
                 if idx < self.tabs.len() {
                     self.tabs[idx].search_handle.cancel();
+                    self.tabs[idx].pipeline_handle.shutdown();
                     self.tabs.remove(idx);
                     if self.active_tab >= self.tabs.len() && !self.tabs.is_empty() {
                         self.active_tab = self.tabs.len() - 1;
@@ -792,7 +1017,7 @@ impl App {
                 }
             }
 
-            // ── Bookmarks (#9) ────────────────────────────────────────────────
+            // ── Bookmarks ─────────────────────────────────────────────────────
             Message::ToggleBookmark(line_num) => {
                 if let Some(tab) = self.tab_mut() {
                     if tab.bookmarks.contains(&line_num) {
@@ -824,7 +1049,7 @@ impl App {
                 if let Some(t) = self.tab_mut() { t.scroll_offset = c; }
             }
 
-            // ── Search history (#6) ───────────────────────────────────────────
+            // ── Search history ────────────────────────────────────────────────
             Message::HistoryPrev => {
                 if self.search_history.is_empty() { return Task::none(); }
                 if self.history_cursor.is_none() {
@@ -854,20 +1079,297 @@ impl App {
                 }
             }
 
-            // ── Extra highlights (#12) ────────────────────────────────────────
+            // ── Extra highlights ──────────────────────────────────────────────
             Message::AddHighlight => {
+                let is_regex = self.filter_is_regex;
                 let Some(tab) = self.tab_mut() else { return Task::none(); };
                 if tab.extra_highlights.len() >= HIGHLIGHT_COLORS.len() { return Task::none(); }
-                if tab.search_query.is_empty() { return Task::none(); }
+                if tab.line_filter_query.is_empty() { return Task::none(); }
                 let idx     = tab.extra_highlights.len();
-                let pattern = tab.search_query.clone();
-                let re      = regex::Regex::new(&pattern).ok();
-                let color   = HIGHLIGHT_COLORS[idx];
+                let pattern = tab.line_filter_query.clone();
+                // Build a regex: use literal escape when not in regex mode
+                let re = if is_regex {
+                    regex::Regex::new(&pattern).ok()
+                } else {
+                    regex::Regex::new(&regex::escape(&pattern)).ok()
+                };
+                let color = HIGHLIGHT_COLORS[idx];
                 tab.extra_highlights.push(ExtraHighlight { pattern, regex: re, color });
             }
             Message::RemoveHighlight(idx) => {
                 let Some(tab) = self.tab_mut() else { return Task::none(); };
                 if idx < tab.extra_highlights.len() { tab.extra_highlights.remove(idx); }
+            }
+
+            // ── Pipeline ─────────────────────────────────────────────────────
+            Message::TogglePipeline => {
+                if let Some(tab) = self.tab_mut() {
+                    tab.pipeline_open = !tab.pipeline_open;
+                }
+            }
+
+            Message::PipelinePreviewLayer(maybe_id) => {
+                match maybe_id {
+                    None => {
+                        // Clear preview → re-run full pipeline
+                        self.trigger_pipeline();
+                    }
+                    Some(id) => {
+                        // Toggle: clicking the same layer again clears the preview
+                        let already = self.tab().and_then(|t| t.pipeline_preview_to) == Some(id);
+                        if already {
+                            self.trigger_pipeline();
+                        } else {
+                            let Some(tab) = self.tab_mut() else { return Task::none(); };
+                            tab.pipeline_preview_to = Some(id);
+                            if tab.pipeline.has_filter_layers_up_to(id) {
+                                let config = tab.pipeline.to_config_up_to(id);
+                                tab.pipeline_handle.run(config);
+                                tab.pipeline_stale = true;
+                            } else {
+                                // No filter layers up to this point — all lines pass
+                                let all: Vec<usize> = (0..tab.total_lines()).collect();
+                                tab.last_pipeline_output = all.clone();
+                                tab.rebuild_view_rows_from_filter(all);
+                                tab.pipeline_stale = false;
+                            }
+                            self.recalc_viewport();
+                        }
+                    }
+                }
+            }
+
+            Message::PipelineAddFilter => {
+                let Some(tab) = self.tab_mut() else { return Task::none(); };
+                let id = tab.pipeline.alloc_id();
+                tab.pipeline.layers.push(crate::pipeline::UiLayer::new_filter(id, "", false));
+            }
+
+            Message::PipelineAddRewrite => {
+                let Some(tab) = self.tab_mut() else { return Task::none(); };
+                let id = tab.pipeline.alloc_id();
+                tab.pipeline.layers.push(crate::pipeline::UiLayer::new_rewrite(id, "", ""));
+            }
+
+            Message::PipelineAddMask => {
+                let Some(tab) = self.tab_mut() else { return Task::none(); };
+                let id = tab.pipeline.alloc_id();
+                tab.pipeline.layers.push(crate::pipeline::UiLayer::new_mask(id, "", "***"));
+            }
+
+            Message::PipelineRemoveLayer(id) => {
+                {
+                    let Some(tab) = self.tab_mut() else { return Task::none(); };
+                    tab.pipeline.layers.retain(|ul| ul.layer.id != id);
+                }
+                self.trigger_pipeline();
+            }
+
+            Message::PipelineToggleLayer(id) => {
+                {
+                    let Some(tab) = self.tab_mut() else { return Task::none(); };
+                    if let Some(ul) = tab.pipeline.layers.iter_mut().find(|ul| ul.layer.id == id) {
+                        ul.layer.enabled = !ul.layer.enabled;
+                    }
+                }
+                self.trigger_pipeline();
+            }
+
+            Message::PipelineToggleLayerExclude(id) => {
+                {
+                    let Some(tab) = self.tab_mut() else { return Task::none(); };
+                    if let Some(ul) = tab.pipeline.layers.iter_mut().find(|ul| ul.layer.id == id) {
+                        if let flash_core::LayerKind::Filter { exclude, .. } = &mut ul.layer.kind {
+                            *exclude = !*exclude;
+                        }
+                    }
+                }
+                self.trigger_pipeline();
+            }
+
+            Message::PipelineMoveLayer(id, dir) => {
+                {
+                    let Some(tab) = self.tab_mut() else { return Task::none(); };
+                    if let Some(pos) = tab.pipeline.layers.iter().position(|ul| ul.layer.id == id) {
+                        let new_pos = (pos as i64 + dir as i64)
+                            .max(0)
+                            .min(tab.pipeline.layers.len() as i64 - 1) as usize;
+                        tab.pipeline.layers.swap(pos, new_pos);
+                    }
+                }
+                self.trigger_pipeline();
+            }
+
+            Message::PipelineEditPattern(id, s) => {
+                let Some(tab) = self.tab_mut() else { return Task::none(); };
+                if let Some(ul) = tab.pipeline.layers.iter_mut().find(|ul| ul.layer.id == id) {
+                    ul.draft_pattern = s;
+                }
+            }
+
+            Message::PipelineEditExtra(id, s) => {
+                let Some(tab) = self.tab_mut() else { return Task::none(); };
+                if let Some(ul) = tab.pipeline.layers.iter_mut().find(|ul| ul.layer.id == id) {
+                    ul.draft_extra = s;
+                }
+            }
+
+            Message::PipelineCommitLayer(id) => {
+                let Some(tab) = self.tab_mut() else { return Task::none(); };
+                if let Some(ul) = tab.pipeline.layers.iter_mut().find(|ul| ul.layer.id == id) {
+                    let pattern = ul.draft_pattern.clone();
+                    let extra   = ul.draft_extra.clone();
+                    // Validate and apply
+                    match &ul.layer.kind {
+                        flash_core::LayerKind::Filter { exclude, .. } => {
+                            let excl = *exclude;
+                            match regex::Regex::new(&pattern) {
+                                Ok(_) => {
+                                    ul.layer.kind = flash_core::LayerKind::Filter {
+                                        pattern, exclude: excl,
+                                    };
+                                    ul.parse_error  = None;
+                                    ul.compiled_re  = None;
+                                }
+                                Err(e) => {
+                                    ul.parse_error = Some(e.to_string());
+                                    return Task::none();
+                                }
+                            }
+                        }
+                        flash_core::LayerKind::Rewrite { .. } => {
+                            match regex::Regex::new(&pattern) {
+                                Ok(re) => {
+                                    ul.layer.kind  = flash_core::LayerKind::Rewrite {
+                                        find: pattern, replacement: extra,
+                                    };
+                                    ul.compiled_re = Some(re);
+                                    ul.parse_error = None;
+                                }
+                                Err(e) => {
+                                    ul.parse_error = Some(e.to_string());
+                                    return Task::none();
+                                }
+                            }
+                        }
+                        flash_core::LayerKind::Mask { .. } => {
+                            match regex::Regex::new(&pattern) {
+                                Ok(re) => {
+                                    ul.layer.kind  = flash_core::LayerKind::Mask {
+                                        pattern, mask_with: extra,
+                                    };
+                                    ul.compiled_re = Some(re);
+                                    ul.parse_error = None;
+                                }
+                                Err(e) => {
+                                    ul.parse_error = Some(e.to_string());
+                                    return Task::none();
+                                }
+                            }
+                        }
+                    }
+                }
+                self.trigger_pipeline();
+            }
+
+            Message::PollPipeline => {
+                let mut needs_recalc = false;
+                for tab in &mut self.tabs {
+                    if !tab.pipeline_stale { continue; }
+                    for resp in tab.pipeline_handle.try_recv_all() {
+                        match resp {
+                            PipelineResponse::Complete(indices) => {
+                                tab.last_pipeline_output = indices.clone();
+                                tab.rebuild_view_rows_from_filter(indices);
+                                tab.pipeline_stale = false;
+                                needs_recalc = true;
+                            }
+                            PipelineResponse::Cancelled => {}
+                            PipelineResponse::Error(_e) => {
+                                tab.pipeline_stale = false;
+                            }
+                        }
+                    }
+                }
+                if needs_recalc { self.recalc_viewport(); }
+            }
+
+            Message::ToggleContext(anchor) => {
+                {
+                    let Some(tab) = self.tab_mut() else { return Task::none(); };
+                    if tab.context_expanded.contains(&anchor) {
+                        tab.context_expanded.remove(&anchor);
+                    } else {
+                        tab.context_expanded.insert(anchor);
+                    }
+                    let output = tab.last_pipeline_output.clone();
+                    tab.rebuild_view_rows_from_filter(output);
+                }
+                self.recalc_viewport();
+            }
+
+            Message::JumpToSource(n) => {
+                let vp = self.viewport_lines;
+                let Some(tab) = self.tab_mut() else { return Task::none(); };
+                tab.jump_source_line = Some(n);
+                tab.selected_line    = Some(n);
+                let total  = tab.total_lines();
+                let target = n.saturating_sub(vp / 2);
+                tab.scroll_offset = virtual_list::clamp_offset(target, total, vp);
+            }
+
+            Message::JumpToSourceClear => {
+                {
+                    let Some(tab) = self.tab_mut() else { return Task::none(); };
+                    tab.jump_source_line = None;
+                }
+                self.recalc_viewport();
+            }
+
+            // ── Process stats ─────────────────────────────────────────────────
+            Message::UpdateProcStats => {
+                if let Ok(pid) = sysinfo::get_current_pid() {
+                    self.sysinfo_sys.refresh_processes(
+                        ProcessesToUpdate::Some(&[pid]),
+                        false,
+                    );
+                    if let Some(proc) = self.sysinfo_sys.process(pid) {
+                        self.proc_mem_mb  = proc.memory() as f64 / 1_048_576.0;
+                        self.proc_cpu_pct = proc.cpu_usage() as f64;
+                    }
+                }
+            }
+
+            // ── Recent files panel ────────────────────────────────────────────
+            Message::ToggleRecentFiles => {
+                self.recent_files_open = !self.recent_files_open;
+                self.context_menu_line = None;
+            }
+
+            // ── Right-click context menu ──────────────────────────────────────
+            Message::RightClickLine(n) => {
+                if let Some(t) = self.tab_mut() { t.selected_line = Some(n); }
+                self.context_menu_line = if self.context_menu_line == Some(n) { None } else { Some(n) };
+            }
+            Message::CloseContextMenu => { self.context_menu_line = None; }
+            Message::CopyContextLine => {
+                // Collect text before clearing the borrow on self
+                let text_to_copy: Option<String> = {
+                    let n = self.context_menu_line;
+                    n.and_then(|n| {
+                        self.tab().and_then(|tab| {
+                            let reader = LineReader::new(
+                                tab.file_data_arc.as_ref().as_ref(),
+                                &tab.open_file.line_index,
+                            );
+                            reader.get_line(n).map(|s| s.to_string())
+                        })
+                    })
+                };
+                self.context_menu_line = None;
+                if let Some(text) = text_to_copy {
+                    return iced::clipboard::write(text);
+                }
             }
 
             Message::Noop => {}
@@ -888,32 +1390,57 @@ impl App {
             let size = t.file_data_arc.as_ref().as_ref().len() as u64;
             (t.file_name(), size, t.total_lines())
         });
-        let search_query       = active.map(|t| t.search_query.as_str()).unwrap_or("");
-        let result_count       = active.map(|t| t.search_results.len()).unwrap_or(0);
+        let _search_query      = active.map(|t| t.search_query.as_str()).unwrap_or("");
+        let _result_count      = active.map(|t| t.search_results.len()).unwrap_or(0);
         let search_in_progress = active.map(|t| t.search_in_progress).unwrap_or(false);
         let has_file           = !self.tabs.is_empty();
 
-        let search_bar = views::search_bar::view(
-            search_query, result_count, search_in_progress, has_file,
-            file_info.as_ref().map(|(n, s, l)| (n.as_str(), *s, *l)),
-            self.tail_mode,
-            p,
+        // ── Selected line text/level for info panel ───────────────────────────
+        let selected_line_text: Option<String> = active.and_then(|t| {
+            t.selected_line.and_then(|n| {
+                let data = t.file_data_arc.as_ref().as_ref();
+                let r    = LineReader::new(data, &t.open_file.line_index);
+                r.get_line(n).map(|s| s.to_string())
+            })
+        });
+        let selected_line_level = selected_line_text.as_deref()
+            .and_then(flash_core::LogLevel::detect);
+
+        // ── Activity bar (left, always visible) ───────────────────────────────
+        let pipeline_open = active.map(|t| t.pipeline_open).unwrap_or(false);
+        let activity_bar  = views::left_sidebar::view(
+            pipeline_open, self.info_panel_open, has_file, p,
         );
 
+        // (search_bar removed — filter bar is now the primary search/filter input)
+
+        // ── Filter bar ────────────────────────────────────────────────────────
         let empty_hl: HashSet<flash_core::LogLevel> = HashSet::new();
         let hidden_levels    = active.map(|t| &t.hidden_levels).unwrap_or(&empty_hl);
         let line_filter_q    = active.map(|t| t.line_filter_query.as_str()).unwrap_or("");
-        let filter_count     = active.and_then(|t| t.active_line_filter.as_ref().map(|f| f.len()));
         let extra_highlights = active.map(|t| t.extra_highlights.as_slice()).unwrap_or(&[]);
+
+        let filter_count: Option<usize> = active.and_then(|t| {
+            if t.pipeline.has_active_filter_layers()
+               || !t.hidden_levels.is_empty()
+               || !t.line_filter_query.is_empty()
+            {
+                let cnt = t.view_rows.iter().filter(|r| matches!(r, ViewRow::Line(_))).count();
+                Some(cnt)
+            } else {
+                None
+            }
+        });
 
         let filter_bar = views::filter_bar::view(
             hidden_levels, line_filter_q, has_file, filter_count,
-            extra_highlights, search_query, self.line_wrap, p,
+            extra_highlights, self.line_wrap, self.filter_is_regex, self.tail_mode,
+            self.recent_files_open, !self.recent_files.is_empty(), p,
         );
 
+        // ── Log view ──────────────────────────────────────────────────────────
         let reader            = active.map(|t| LineReader::new(t.file_data_arc.as_ref().as_ref(), &t.open_file.line_index));
         let total_visible     = active.map(|t| t.total_visible_lines()).unwrap_or(0);
-        let active_filter     = active.and_then(|t| t.active_line_filter.as_deref());
         let scroll_offset     = active.map(|t| t.scroll_offset).unwrap_or(0);
         let compiled_regex    = active.and_then(|t| t.compiled_search_regex.as_ref());
         let empty_set: HashSet<usize> = HashSet::new();
@@ -922,12 +1449,24 @@ impl App {
         let empty_bm: HashSet<usize> = HashSet::new();
         let bookmarks         = active.map(|t| &t.bookmarks).unwrap_or(&empty_bm);
         let search_results    = active.map(|t| t.search_results.as_slice()).unwrap_or(&[]);
+        let view_rows         = active.map(|t| t.view_rows.as_slice());
+        let jump_source       = active.and_then(|t| t.jump_source_line);
+        let pipeline_stale      = active.map(|t| t.pipeline_stale).unwrap_or(false);
+        let pipeline_preview_to = active.and_then(|t| t.pipeline_preview_to);
+        let empty_ctx: HashSet<usize> = HashSet::new();
+        let context_expanded    = active.map(|t| &t.context_expanded).unwrap_or(&empty_ctx);
 
         let log_view = views::log_view::view(
             reader, scroll_offset, self.viewport_lines, total_visible,
-            compiled_regex, search_result_set, active_filter,
+            compiled_regex, search_result_set,
+            view_rows, jump_source,
             self.font_size, selected_line, self.line_wrap,
             bookmarks, extra_highlights, search_results,
+            context_expanded,
+            active.map(|t| &t.pipeline),
+            pipeline_stale,
+            pipeline_preview_to,
+            self.color_log_levels,
             p,
         );
 
@@ -936,6 +1475,23 @@ impl App {
             search_results, selected_result, search_in_progress, compiled_regex, p,
         );
 
+        // ── Right info panel ──────────────────────────────────────────────────
+        let info_panel = views::info_panel::view(
+            file_info.as_ref().map(|(n, _, _)| n.clone()),
+            file_info.as_ref().map(|(_, s, _)| *s),
+            file_info.as_ref().map(|(_, _, l)| *l),
+            selected_line,
+            selected_line_text,
+            selected_line_level,
+            scroll_offset,
+            self.viewport_lines,
+            total_visible,
+            self.proc_mem_mb,
+            self.proc_cpu_pct,
+            p,
+        );
+
+        // ── Centre column ─────────────────────────────────────────────────────
         let hr = container(text("").size(1))
             .width(Length::Fill)
             .height(Length::Fixed(1.0))
@@ -943,15 +1499,33 @@ impl App {
                 background: Some(bdr.into()), ..Default::default()
             });
 
-        let mut col = column![search_bar];
+        let mut center_col = column![];
         if self.tabs.len() > 1 {
-            col = col.push(views::tab_bar::view(&self.tabs, self.active_tab, p));
+            center_col = center_col.push(views::tab_bar::view(&self.tabs, self.active_tab, p));
         } else {
-            col = col.push(hr);
+            center_col = center_col.push(hr);
         }
-        col = col.push(filter_bar).push(log_view).push(results_panel);
+        center_col = center_col.push(filter_bar).push(log_view).push(results_panel);
+        let center: Element<'_, Message> = center_col.width(Length::Fill).into();
 
-        let main_layout = container(col)
+        // ── 3-panel body: [activity | (pipeline) | center | (info)] ───────────
+        let mut body_row = row![activity_bar];
+        if let Some(tab) = active {
+            if tab.pipeline_open {
+                let pp = views::pipeline_panel::view(&tab.pipeline, tab.pipeline_stale, pipeline_preview_to, p);
+                body_row = body_row.push(pp);
+            }
+        }
+        body_row = body_row.push(center);
+        if self.info_panel_open {
+            body_row = body_row.push(info_panel);
+        }
+        let body: Element<'_, Message> = body_row
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .into();
+
+        let main_layout = container(body)
             .width(Length::Fill)
             .height(Length::Fill)
             .style(move |_: &iced::Theme| container::Style {
@@ -967,7 +1541,13 @@ impl App {
             let overlay = views::jump_to_line::view(&self.jump_input, total, p);
             stack![main_layout, overlay].into()
         } else if self.settings_open {
-            let overlay = views::settings_panel::view(self.app_theme, self.font_size, self.line_wrap, p);
+            let overlay = views::settings_panel::view(self.app_theme, self.font_size, self.line_wrap, self.color_log_levels, p);
+            stack![main_layout, overlay].into()
+        } else if self.recent_files_open {
+            let overlay = views::recent_panel::view(&self.recent_files, p);
+            stack![main_layout, overlay].into()
+        } else if let Some(ctx_line) = self.context_menu_line {
+            let overlay = views::context_menu::view(ctx_line, self.cursor_x, self.scrollbar_hover_y, p);
             stack![main_layout, overlay].into()
         } else {
             main_layout.into()
@@ -984,7 +1564,6 @@ impl App {
         subs.push(keyboard::on_key_press(|key, modifiers| Some(Message::KeyPressed(key, modifiers))));
         subs.push(window::resize_events().map(|(_id, size)| Message::WindowResized(size)));
 
-        // Mouse wheel (ignored-only to avoid fighting the results scrollable)
         subs.push(event::listen_with(|evt, status, _id| {
             if let event::Status::Ignored = status {
                 if let iced::Event::Mouse(mouse::Event::WheelScrolled { delta }) = evt {
@@ -998,21 +1577,18 @@ impl App {
             None
         }));
 
-        // Global cursor + button release (scrollbar drag)
         subs.push(event::listen_with(|evt, _status, _id| match evt {
-            iced::Event::Mouse(mouse::Event::CursorMoved { position }) => Some(Message::CursorMoved(position.y)),
+            iced::Event::Mouse(mouse::Event::CursorMoved { position }) => Some(Message::CursorMoved(position.x, position.y)),
             iced::Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => Some(Message::ScrollbarReleased),
             _ => None,
         }));
 
-        // Modifier key tracking (Ctrl+Wheel zoom, Ctrl+Arrow history)
         subs.push(event::listen_with(|evt, _status, _id| {
             if let iced::Event::Keyboard(iced::keyboard::Event::ModifiersChanged(mods)) = evt {
                 Some(Message::ModifiersChanged(mods))
             } else { None }
         }));
 
-        // File drop (#14)
         subs.push(event::listen_with(|evt, _status, _id| {
             if let iced::Event::Window(window::Event::FileDropped(path)) = evt {
                 Some(Message::FileDrop(path))
@@ -1023,10 +1599,16 @@ impl App {
             subs.push(iced::time::every(std::time::Duration::from_millis(50)).map(|_| Message::PollSearchResults));
         }
 
-        // File change polling (#7 / #8)
+        if self.tabs.iter().any(|t| t.pipeline_stale) {
+            subs.push(iced::time::every(std::time::Duration::from_millis(50)).map(|_| Message::PollPipeline));
+        }
+
         if self.watch_rx.is_some() {
             subs.push(iced::time::every(std::time::Duration::from_millis(500)).map(|_| Message::PollFileChange));
         }
+
+        // Process stats — refresh every 2 seconds
+        subs.push(iced::time::every(std::time::Duration::from_secs(2)).map(|_| Message::UpdateProcStats));
 
         Subscription::batch(subs)
     }
@@ -1034,7 +1616,6 @@ impl App {
 
 // ── Free helpers ──────────────────────────────────────────────────────────────
 
-/// Async helper: read + decompress a file and return (path, bytes).
 async fn load_file(path: PathBuf) -> Result<(PathBuf, Option<Vec<u8>>), String> {
     if path.extension().and_then(|e| e.to_str()) == Some("gz") {
         let raw = tokio::fs::read(&path).await.map_err(|e| e.to_string())?;
@@ -1049,7 +1630,6 @@ async fn load_file(path: PathBuf) -> Result<(PathBuf, Option<Vec<u8>>), String> 
     }
 }
 
-/// If bytes aren't valid UTF-8, do a lossy replacement.
 fn ensure_utf8(raw: Vec<u8>) -> Vec<u8> {
     if std::str::from_utf8(&raw).is_err() {
         String::from_utf8_lossy(&raw).into_owned().into_bytes()
@@ -1058,8 +1638,6 @@ fn ensure_utf8(raw: Vec<u8>) -> Vec<u8> {
     }
 }
 
-/// Build a Tab from a path. For regular files uses mmap (zero-copy); for gz
-/// files accepts pre-decompressed bytes. Returns None if mmap fails.
 fn build_tab(path: PathBuf, gz_data: Option<Vec<u8>>) -> Option<Tab> {
     let file_map = FileMap::open(&path).ok()?;
     let data_arc: Arc<dyn AsRef<[u8]> + Send + Sync> = match gz_data {
@@ -1072,8 +1650,14 @@ fn build_tab(path: PathBuf, gz_data: Option<Vec<u8>>) -> Option<Tab> {
     for i in 0..=line_count { if let Some(o) = line_index.offset(i) { offsets.push(o); } }
     let file_len = data_arc.as_ref().as_ref().len() as u64;
     if offsets.last().copied() != Some(file_len) { offsets.push(file_len); }
-    let offsets_arc   = Arc::new(offsets);
-    let search_handle = spawn_search_worker(data_arc.clone(), offsets_arc.clone());
+    let offsets_arc     = Arc::new(offsets);
+    let search_handle   = spawn_search_worker(data_arc.clone(), offsets_arc.clone());
+    let pipeline_handle = spawn_pipeline_worker(data_arc.clone(), offsets_arc.clone());
+
+    // Initially all lines pass (no filter layers)
+    let last_pipeline_output: Vec<usize> = (0..line_count).collect();
+    let view_rows: Vec<ViewRow> = last_pipeline_output.iter().map(|&i| ViewRow::Line(i)).collect();
+
     Some(Tab {
         open_file:             OpenFile { file_map, line_index, path },
         scroll_offset:         0,
@@ -1088,11 +1672,48 @@ fn build_tab(path: PathBuf, gz_data: Option<Vec<u8>>) -> Option<Tab> {
         line_offsets_arc:      offsets_arc,
         hidden_levels:         HashSet::new(),
         line_filter_query:     String::new(),
-        active_line_filter:    None,
         selected_line:         None,
         bookmarks:             HashSet::new(),
         extra_highlights:      Vec::new(),
+        pipeline:              TransformPipeline::new(),
+        pipeline_handle,
+        pipeline_stale:        false,
+        pipeline_open:         false,
+        view_rows,
+        last_pipeline_output,
+        context_expanded:      HashSet::new(),
+        jump_source_line:      None,
+        pipeline_preview_to:   None,
+        filter_regex:          None,
     })
+}
+
+// ── Recent-files persistence ──────────────────────────────────────────────────
+
+fn recent_files_path() -> PathBuf {
+    let base = std::env::var_os("APPDATA")
+        .or_else(|| std::env::var_os("HOME"))
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("."));
+    base.join(".flash_recent")
+}
+
+fn load_recent_files() -> Vec<PathBuf> {
+    std::fs::read_to_string(recent_files_path())
+        .unwrap_or_default()
+        .lines()
+        .filter(|l| !l.trim().is_empty())
+        .map(PathBuf::from)
+        .take(10)
+        .collect()
+}
+
+fn save_recent_files(files: &[PathBuf]) {
+    let content = files.iter()
+        .map(|p| p.to_string_lossy().to_string())
+        .collect::<Vec<_>>()
+        .join("\n");
+    let _ = std::fs::write(recent_files_path(), content);
 }
 
 pub fn format_file_size(bytes: u64) -> String {

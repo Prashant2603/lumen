@@ -1,4 +1,4 @@
-use iced::widget::{button, column, container, row, text, text_input};
+use iced::widget::{button, column, container, mouse_area, row, text, text_input};
 use iced::{Color, Element, Length};
 
 use crate::app::Message;
@@ -20,6 +20,7 @@ pub fn view<'a>(input: &str, total_lines: usize, p: Palette) -> Element<'a, Mess
     };
 
     let text_in = text_input(&hint, input)
+        .id(text_input::Id::new("jump_input"))
         .on_input(Message::JumpInputChanged)
         .on_submit(Message::JumpSubmit)
         .padding([8, 12])
@@ -84,14 +85,18 @@ pub fn view<'a>(input: &str, total_lines: usize, p: Palette) -> Element<'a, Mess
         ..Default::default()
     });
 
-    container(card)
-        .width(Length::Fill)
-        .height(Length::Fill)
-        .center_x(Length::Fill)
-        .center_y(Length::Fill)
-        .style(|_: &iced::Theme| container::Style {
-            background: Some(Color::from_rgba(0.0, 0.0, 0.0, 0.55).into()),
-            ..Default::default()
-        })
-        .into()
+    // Backdrop: click anywhere outside the card to close
+    mouse_area(
+        container(card)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .center_x(Length::Fill)
+            .center_y(Length::Fill)
+            .style(|_: &iced::Theme| container::Style {
+                background: Some(Color::from_rgba(0.0, 0.0, 0.0, 0.55).into()),
+                ..Default::default()
+            }),
+    )
+    .on_press(Message::JumpClose)
+    .into()
 }

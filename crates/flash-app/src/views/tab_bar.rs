@@ -35,7 +35,7 @@ pub fn view<'a>(tabs: &[Tab], active: usize, p: Palette) -> Element<'a, Message>
         let close_hover_bg = if is_active { bg_h } else {
             Color { a: 0.6, ..bg_h }
         };
-        let close_btn = button(text("×").size(11).color(fg_in))
+        let close_btn = button(text("x").size(11).color(fg_in))
             .on_press(Message::CloseTab(idx))
             .padding([1, 5])
             .style(move |_: &iced::Theme, status| button::Style {

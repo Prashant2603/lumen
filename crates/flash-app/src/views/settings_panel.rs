@@ -1,11 +1,11 @@
-use iced::widget::{button, column, container, row, text};
+use iced::widget::{button, column, container, mouse_area, row, text};
 use iced::{Color, Element, Length};
 
 use crate::app::Message;
 use crate::theme::{AppTheme, Palette};
 
 /// Full-screen overlay containing a centred settings card.
-pub fn view<'a>(app_theme: AppTheme, font_size: f32, line_wrap: bool, p: Palette) -> Element<'a, Message> {
+pub fn view<'a>(app_theme: AppTheme, font_size: f32, line_wrap: bool, color_log_levels: bool, p: Palette) -> Element<'a, Message> {
     let bg_p  = p.bg_primary;
     let bg_s  = p.bg_surface;
     let bg_h  = p.bg_hover;
@@ -125,7 +125,7 @@ pub fn view<'a>(app_theme: AppTheme, font_size: f32, line_wrap: bool, p: Palette
     let wrap_label   = if line_wrap { "On" } else { "Off" };
     let wrap_btn = button(
         row![
-            container(text(if line_wrap { "☑" } else { "☐" }).size(13).color(if line_wrap { acc } else { fgm }))
+            container(text(if line_wrap { "[v]" } else { "[ ]" }).size(11).color(if line_wrap { acc } else { fgm }))
                 .width(Length::Fixed(20.0)),
             text(format!("Line Wrap  [{}]", wrap_label)).size(13).color(fg),
         ]
@@ -145,9 +145,33 @@ pub fn view<'a>(app_theme: AppTheme, font_size: f32, line_wrap: bool, p: Palette
         shadow: iced::Shadow::default(),
     });
 
+    let color_label   = if color_log_levels { "On" } else { "Off" };
+    let color_btn = button(
+        row![
+            container(text(if color_log_levels { "[v]" } else { "[ ]" }).size(11).color(if color_log_levels { acc } else { fgm }))
+                .width(Length::Fixed(20.0)),
+            text(format!("Log Level Colors  [{}]", color_label)).size(13).color(fg),
+        ]
+        .spacing(6)
+        .align_y(iced::alignment::Vertical::Center),
+    )
+    .on_press(Message::ToggleColorLogLevels)
+    .padding([5, 10])
+    .width(Length::Fill)
+    .style(move |_: &iced::Theme, status| button::Style {
+        background: Some(match status {
+            button::Status::Hovered => bg_h.into(),
+            _ => Color::TRANSPARENT.into(),
+        }),
+        text_color: fg,
+        border: iced::Border::default(),
+        shadow: iced::Shadow::default(),
+    });
+
     let wrap_section = column![
         text("Display").size(13).color(acc),
         wrap_btn,
+        color_btn,
     ]
     .spacing(6);
 
@@ -159,7 +183,7 @@ pub fn view<'a>(app_theme: AppTheme, font_size: f32, line_wrap: bool, p: Palette
     .spacing(2);
 
     // ── Header ───────────────────────────────────────────────────────────────
-    let close_btn = button(text("✕").size(14).color(fgm))
+    let close_btn = button(text("x").size(13).color(fgm))
         .on_press(Message::ToggleSettings)
         .padding([2, 8])
         .style(move |_: &iced::Theme, status| button::Style {
@@ -217,15 +241,18 @@ pub fn view<'a>(app_theme: AppTheme, font_size: f32, line_wrap: bool, p: Palette
         ..Default::default()
     });
 
-    // ── Backdrop + centred card ───────────────────────────────────────────────
-    container(card)
-        .width(Length::Fill)
-        .height(Length::Fill)
-        .center_x(Length::Fill)
-        .center_y(Length::Fill)
-        .style(|_: &iced::Theme| container::Style {
-            background: Some(Color::from_rgba(0.0, 0.0, 0.0, 0.55).into()),
-            ..Default::default()
-        })
-        .into()
+    // ── Backdrop + centred card (click outside to close) ─────────────────────
+    mouse_area(
+        container(card)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .center_x(Length::Fill)
+            .center_y(Length::Fill)
+            .style(|_: &iced::Theme| container::Style {
+                background: Some(Color::from_rgba(0.0, 0.0, 0.0, 0.55).into()),
+                ..Default::default()
+            }),
+    )
+    .on_press(Message::ToggleSettings)
+    .into()
 }

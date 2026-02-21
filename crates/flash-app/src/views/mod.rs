@@ -1,7 +1,12 @@
 pub mod command_palette;
+pub mod context_menu;
+pub mod recent_panel;
 pub mod filter_bar;
+pub mod info_panel;
 pub mod jump_to_line;
+pub mod left_sidebar;
 pub mod log_view;
+pub mod pipeline_panel;
 pub mod results_panel;
 pub mod search_bar;
 pub mod settings_panel;

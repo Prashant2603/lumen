@@ -1,4 +1,4 @@
-use iced::widget::{button, column, container, row, text, text_input, Column};
+use iced::widget::{button, column, container, mouse_area, row, text, text_input, Column};
 use iced::{Color, Element, Length};
 
 use crate::app::{Message, PaletteCmd};
@@ -20,6 +20,7 @@ pub fn view<'a>(
 
     // Search input
     let input = text_input("Type a command…", query)
+        .id(text_input::Id::new("palette_input"))
         .on_input(Message::PaletteQueryChanged)
         .on_submit(Message::PaletteSelect)
         .padding([10, 14])
@@ -124,31 +125,20 @@ pub fn view<'a>(
         ..Default::default()
     });
 
-    // Backdrop + dismiss button area
-    let close_btn = button(text("").size(1))
-        .on_press(Message::PaletteClose)
-        .width(Length::Fill)
-        .height(Length::Fill)
-        .style(|_: &iced::Theme, _| button::Style {
-            background: None,
-            text_color: Color::TRANSPARENT,
-            border: iced::Border::default(),
-            shadow: iced::Shadow::default(),
-        });
-
-    container(
-        column![
+    // Backdrop: click anywhere outside the card to close
+    mouse_area(
+        container(
             container(card)
                 .center_x(Length::Fill)
                 .padding(iced::Padding { top: 80.0, right: 0.0, bottom: 0.0, left: 0.0 }),
-            close_btn,
-        ]
+        )
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .style(|_: &iced::Theme| container::Style {
+            background: Some(Color::from_rgba(0.0, 0.0, 0.0, 0.5).into()),
+            ..Default::default()
+        }),
     )
-    .width(Length::Fill)
-    .height(Length::Fill)
-    .style(|_: &iced::Theme| container::Style {
-        background: Some(Color::from_rgba(0.0, 0.0, 0.0, 0.5).into()),
-        ..Default::default()
-    })
+    .on_press(Message::PaletteClose)
     .into()
 }

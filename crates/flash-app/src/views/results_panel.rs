@@ -86,7 +86,7 @@ pub fn view<'a>(
         };
 
         let result_row = button(
-            container(rich_text(spans).size(12))
+            container(rich_text(spans).size(13).font(iced::Font::MONOSPACE))
                 .width(Length::Fill)
                 .padding([2, 8]),
         )
