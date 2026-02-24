@@ -1,10 +1,10 @@
 use std::collections::HashSet;
 
 use flash_core::{LineReader, LogLevel};
-use iced::widget::{button, column, container, mouse_area, rich_text, row, span, text, Column};
+use iced::widget::{button, column, container, mouse_area, rich_text, row, span, text, Column, Row};
 use iced::{Color, Element, Length};
 
-use crate::app::{ExtraHighlight, Message, ViewRow};
+use crate::app::{ExtraHighlight, Message, TextSel, ViewRow};
 use crate::pipeline::TransformPipeline;
 use crate::theme::Palette;
 
@@ -29,6 +29,7 @@ pub fn view<'a>(
     pipeline_preview_to: Option<u64>,
     color_log_levels:    bool,
     h_scroll_offset:     usize,
+    text_sel:            Option<TextSel>,
     p:                   Palette,
 ) -> Element<'a, Message> {
     if reader.is_none() || total_lines == 0 {
@@ -125,7 +126,8 @@ pub fn view<'a>(
     let total_for_digits = total_lines;
     let line_num_chars   = format!("{}", total_for_digits).len();
     let line_num_col_w   = Length::Fixed((line_num_chars as f32 * 8.5 + 20.0).max(44.0));
-    let row_width        = if line_wrap { Length::Fill } else { Length::Shrink };
+    // Always Fill so clicking anywhere on a row (including empty right-side area) registers.
+    let row_width        = Length::Fill;
 
     let mut rows: Vec<Element<'a, Message>> = Vec::with_capacity(render_rows.len());
 
@@ -152,7 +154,13 @@ pub fn view<'a>(
 
         // ── Context rows: simplified rendering ───────────────────────────────
         if is_context {
-            let ctx_bg         = p.context_row_bg;
+            // Apply selection highlight to context rows (full-row bg overlay)
+            let ctx_is_selected = text_sel.map_or(false, |sel| {
+                if sel.is_empty() { return false; }
+                let ((lo_line, _), (hi_line, _)) = sel.normalised();
+                src >= lo_line && src <= hi_line
+            });
+            let ctx_bg         = if ctx_is_selected { ghost(p.selection_bg, pipeline_stale) } else { p.context_row_bg };
             let ctx_text_color = ghost(Color { a: 0.6, ..base_line_color }, pipeline_stale);
             let display_owned  = display_text.to_string();
 
@@ -227,37 +235,59 @@ pub fn view<'a>(
         .width(line_num_col_w)
         .padding(iced::Padding { top: 2.0, right: 6.0, bottom: 2.0, left: 6.0 });
 
-        // Text spans — span content is always an owned String to avoid 'a borrow issues
+        // ── Compute character-level selection range for this line ──────────────
+        // sel_range = (start_char, end_char) relative to display_text (after h_scroll_offset applied)
+        let sel_range: Option<(usize, usize)> = text_sel.and_then(|sel| {
+            if sel.is_empty() { return None; }
+            let ((lo_line, lo_col), (hi_line, hi_col)) = sel.normalised();
+            if src < lo_line || src > hi_line { return None; }
+            let start_col_abs = if src == lo_line { lo_col } else { 0 };
+            let end_col_abs   = if src == hi_line { hi_col } else { usize::MAX };
+            // Adjust for horizontal scroll offset
+            let start = start_col_abs.saturating_sub(h_scroll_offset);
+            let end   = if end_col_abs == usize::MAX {
+                usize::MAX
+            } else {
+                end_col_abs.saturating_sub(h_scroll_offset)
+            };
+            if end != usize::MAX && start >= end { return None; }
+            Some((start, end))
+        });
+
+        // ── Build text spans using char-level annotation ───────────────────────
+        // This approach handles search/extra-highlight and selection overlays uniformly.
         let smb = ghost(p.search_match_bg, pipeline_stale);
         let smf = ghost(p.search_match_fg, pipeline_stale);
 
-        // Helper: build a span from a &str slice using an owned copy
-        // This ensures the span doesn't borrow from any local data
-        macro_rules! owned_span {
-            ($s:expr) => { span($s.to_string()) }
-        }
+        let chars: Vec<char> = display_text.chars().collect();
+        let char_count = chars.len();
 
-        let text_spans: Vec<_> = if is_search_match {
+        // Per-char foreground and optional background annotations
+        let mut fg_ann: Vec<Color>        = vec![line_color; char_count];
+        let mut bg_ann: Vec<Option<Color>> = vec![None; char_count];
+
+        // Build a byte-index → char-index lookup for regex matches (byte positions)
+        // Only built when we actually need it (search match or extra highlight active)
+        let build_byte_to_char = || -> Vec<usize> {
+            let mut map = vec![0usize; display_text.len() + 1];
+            let mut ci  = 0usize;
+            for (bi, _ch) in display_text.char_indices() {
+                map[bi] = ci;
+                ci += 1;
+            }
+            // Fill any trailing bytes for multi-byte chars
+            map[display_text.len()] = ci;
+            map
+        };
+
+        if is_search_match {
             if let Some(re) = compiled_regex {
-                let mut spans = Vec::new();
-                let mut last_end = 0;
+                let b2c = build_byte_to_char();
                 for m in re.find_iter(display_text) {
-                    if m.start() > last_end {
-                        spans.push(owned_span!(&display_text[last_end..m.start()]).color(line_color));
-                    }
-                    spans.push(
-                        owned_span!(&display_text[m.start()..m.end()])
-                            .color(smf)
-                            .background(smb),
-                    );
-                    last_end = m.end();
+                    let sc = b2c[m.start()];
+                    let ec = b2c[m.end()].min(char_count);
+                    for i in sc..ec { fg_ann[i] = smf; bg_ann[i] = Some(smb); }
                 }
-                if last_end < display_text.len() {
-                    spans.push(owned_span!(&display_text[last_end..]).color(line_color));
-                }
-                spans
-            } else {
-                vec![owned_span!(display_text).color(line_color)]
             }
         } else if let Some(eh) = extra_highlights.iter().find(|eh| {
             eh.regex.as_ref().map_or(false, |re| re.is_match(display_text))
@@ -266,32 +296,59 @@ pub fn view<'a>(
                 let hl_color = ghost(eh.color, pipeline_stale);
                 let hl_bg    = Color { a: 0.35, ..hl_color };
                 let hl_fg    = ghost(Color::from_rgb(0.0, 0.0, 0.0), pipeline_stale);
-                let mut spans = Vec::new();
-                let mut last_end = 0;
+                let b2c      = build_byte_to_char();
                 for m in re.find_iter(display_text) {
-                    if m.start() > last_end {
-                        spans.push(owned_span!(&display_text[last_end..m.start()]).color(line_color));
-                    }
-                    spans.push(
-                        owned_span!(&display_text[m.start()..m.end()])
-                            .color(hl_fg)
-                            .background(hl_bg),
-                    );
-                    last_end = m.end();
+                    let sc = b2c[m.start()];
+                    let ec = b2c[m.end()].min(char_count);
+                    for i in sc..ec { fg_ann[i] = hl_fg; bg_ann[i] = Some(hl_bg); }
                 }
-                if last_end < display_text.len() {
-                    spans.push(owned_span!(&display_text[last_end..]).color(line_color));
-                }
-                spans
-            } else {
-                vec![owned_span!(display_text).color(line_color)]
             }
+        }
+
+        // Apply selection overlay (overrides bg, preserves fg from search/hl)
+        if let Some((sel_start, sel_end)) = sel_range {
+            let start = sel_start.min(char_count);
+            let end   = if sel_end == usize::MAX { char_count } else { sel_end.min(char_count) };
+            let sel_bg = ghost(p.selection_bg, pipeline_stale);
+            for i in start..end { bg_ann[i] = Some(sel_bg); }
+        }
+
+        // Merge consecutive same-styled chars into spans
+        let text_spans: Vec<_> = if char_count == 0 {
+            vec![span("".to_string()).color(line_color)]
         } else {
-            vec![owned_span!(display_text).color(line_color)]
+            let mut spans = Vec::new();
+            let mut i = 0;
+            while i < char_count {
+                let fg = fg_ann[i];
+                let bg = bg_ann[i];
+                let mut j = i + 1;
+                while j < char_count
+                    && color_approx_eq(fg_ann[j], fg)
+                    && color_opt_approx_eq(bg_ann[j], bg)
+                {
+                    j += 1;
+                }
+                let text: String = chars[i..j].iter().collect();
+                let mut s = span(text).color(fg);
+                if let Some(bg_color) = bg { s = s.background(bg_color); }
+                spans.push(s);
+                i = j;
+            }
+            spans
         };
 
-        // Row background — priority: selected > search match > extra hl > alternating stripe
-        let extra_hl_bg: Option<Color> = if !is_search_match && !is_selected {
+        // ── Row-level selection range check ───────────────────────────────────
+        // All rows between anchor and focus (inclusive) get the selection background.
+        // This gives a clear, full-height highlight even for rows with short lines.
+        let in_text_sel = text_sel.map_or(false, |sel| {
+            if sel.is_empty() { return false; }
+            let ((lo_line, _), (hi_line, _)) = sel.normalised();
+            src >= lo_line && src <= hi_line
+        });
+
+        // Row background — priority: text-sel > selected > search match > extra hl > alternating stripe
+        let extra_hl_bg: Option<Color> = if !is_search_match && !is_selected && !in_text_sel {
             extra_highlights
                 .iter()
                 .find(|eh| eh.regex.as_ref().map_or(false, |re| re.is_match(display_text)))
@@ -303,7 +360,9 @@ pub fn view<'a>(
         // Use view-row index (not src) so stripes always alternate visually after filtering
         let alt_row_bg: Option<Color> = if (scroll_offset + idx) % 2 == 1 { Some(p.bg_alt_row) } else { None };
 
-        let row_bg = if is_selected {
+        let row_bg = if in_text_sel {
+            Some(ghost(p.selection_bg, pipeline_stale))
+        } else if is_selected {
             Some(p.selected_line)
         } else if is_search_match {
             Some(p.search_row_bg)
@@ -399,9 +458,15 @@ pub fn view<'a>(
         if let Some(b) = src_btn { content_row = content_row.push(b); }
         let content_row = content_row.width(row_width).height(Length::Shrink);
 
-        let clickable_content = mouse_area(content_row)
+        // Wrap in a Fill container so clicking anywhere on the row (including
+        // empty right-side space) registers, not just over the text itself.
+        let row_container = container(content_row)
+            .width(Length::Fill)
+            .height(Length::Shrink);
+        let clickable_content = mouse_area(row_container)
             .on_press(Message::LineClicked(src))
             .on_right_press(Message::RightClickLine(src))
+            .on_move(move |_| Message::LineHovered(src))
             .interaction(iced::mouse::Interaction::Text);
 
         let full_row = row![gutter, clickable_content]
@@ -478,39 +543,66 @@ pub fn view<'a>(
     );
     let main_area = row![content_area, minimap].height(Length::Fill);
 
-    // ── Horizontal scrollbar (non-wrap mode, when content is wider than viewport) ──
-    let h_scrollbar: Option<Element<'a, Message>> = if !line_wrap && max_visible_len > 60 {
+    // ── Horizontal scrollbar (non-wrap mode) ─────────────────────────────────
+    // Always shown in non-wrap mode (we already returned early if no file is open).
+    // A full-width thumb means all content fits; thumb shrinks/moves as user scrolls.
+    let h_scrollbar: Option<Element<'a, Message>> = if !line_wrap {
         let sbg2    = p.bg_secondary;
         let sbdr2   = p.border;
         let thumb_c = p.fg_muted;
 
-        // Thumb represents the visible window (assume ~80 chars visible at default font)
+        // Assume ~80 chars are visible in the viewport at any time.
         let visible_chars: f32 = 80.0;
-        let total_chars = max_visible_len.max(80) as f32;
-        let thumb_frac  = (visible_chars / total_chars).min(1.0);
-        let pos_frac    = (h_scroll_offset as f32 / total_chars).min(1.0 - thumb_frac);
+        let total_chars: f32   = (max_visible_len.max(h_scroll_offset + 1) as f32).max(81.0);
+        let thumb_frac: f32    = (visible_chars / total_chars).clamp(0.05, 1.0);
+        let pos_frac:   f32    = (h_scroll_offset as f32 / total_chars)
+            .clamp(0.0, (1.0 - thumb_frac).max(0.0));
 
-        let track = container(
+        // Scale to integer parts for FillPortion (total = 1000 parts).
+        let total_parts: u32 = 1000;
+        let thumb_parts: u16 = ((thumb_frac * total_parts as f32) as u32).max(20).min(980) as u16;
+        let left_parts:  u16 = (pos_frac * total_parts as f32) as u16;
+        let right_parts: u16 = (total_parts as u16).saturating_sub(left_parts + thumb_parts);
+
+        let thumb_bg = Color { a: 0.75, ..thumb_c };
+        let thumb_style = move |_: &iced::Theme| container::Style {
+            background: Some(thumb_bg.into()),
+            border: iced::Border { radius: 2.0.into(), ..Default::default() },
+            ..Default::default()
+        };
+
+        // Three-segment row: [left spacer] [thumb] [right spacer]
+        let mut track_children: Vec<Element<'a, Message>> = Vec::new();
+        if left_parts > 0 {
+            track_children.push(
+                container(text("").size(1))
+                    .width(Length::FillPortion(left_parts))
+                    .height(Length::Fixed(4.0))
+                    .into(),
+            );
+        }
+        track_children.push(
             container(text("").size(1))
+                .width(Length::FillPortion(thumb_parts.max(1)))
                 .height(Length::Fixed(4.0))
-                .width(Length::FillPortion((thumb_frac * 1000.0) as u16))
-                .style(move |_: &iced::Theme| container::Style {
-                    background: Some(Color { a: 0.7, ..thumb_c }.into()),
-                    border: iced::Border { radius: 2.0.into(), ..Default::default() },
-                    ..Default::default()
-                }),
-        )
-        .width(Length::Fill)
-        .padding(iced::Padding {
-            left:   pos_frac * 1000.0,  // approximation
-            top:    3.0,
-            right:  0.0,
-            bottom: 3.0,
-        });
+                .style(thumb_style)
+                .into(),
+        );
+        if right_parts > 0 {
+            track_children.push(
+                container(text("").size(1))
+                    .width(Length::FillPortion(right_parts))
+                    .height(Length::Fixed(4.0))
+                    .into(),
+            );
+        }
 
-        let bar = container(track)
+        let track_row = Row::with_children(track_children).height(Length::Fixed(4.0));
+
+        let bar = container(track_row)
             .width(Length::Fill)
             .height(Length::Fixed(10.0))
+            .padding(iced::Padding { top: 3.0, bottom: 3.0, left: 0.0, right: 0.0 })
             .style(move |_: &iced::Theme| container::Style {
                 background: Some(sbg2.into()),
                 border: iced::Border { color: sbdr2, width: 1.0, radius: 0.0.into() },
@@ -637,4 +729,13 @@ fn color_approx_eq(a: Color, b: Color) -> bool {
         && (a.g - b.g).abs() < 0.002
         && (a.b - b.b).abs() < 0.002
         && (a.a - b.a).abs() < 0.002
+}
+
+#[inline]
+fn color_opt_approx_eq(a: Option<Color>, b: Option<Color>) -> bool {
+    match (a, b) {
+        (None, None)         => true,
+        (Some(ca), Some(cb)) => color_approx_eq(ca, cb),
+        _                    => false,
+    }
 }

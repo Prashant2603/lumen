@@ -28,6 +28,30 @@ pub const HIGHLIGHT_COLORS: [Color; 4] = [
     Color { r: 0.93, g: 0.63, b: 0.35, a: 1.0 }, // amber
 ];
 
+// ── TextSel ───────────────────────────────────────────────────────────────────
+
+/// Character-level text selection (anchor = where drag started, focus = current cursor).
+#[derive(Clone, Copy, Debug)]
+pub struct TextSel {
+    pub anchor_line: usize,
+    pub anchor_col:  usize,
+    pub focus_line:  usize,
+    pub focus_col:   usize,
+}
+
+impl TextSel {
+    /// Return (lo, hi) in (line, col) order so lo ≤ hi.
+    pub fn normalised(&self) -> ((usize, usize), (usize, usize)) {
+        let a = (self.anchor_line, self.anchor_col);
+        let f = (self.focus_line,  self.focus_col);
+        if a <= f { (a, f) } else { (f, a) }
+    }
+    /// True when anchor == focus (no text actually selected).
+    pub fn is_empty(&self) -> bool {
+        self.anchor_line == self.focus_line && self.anchor_col == self.focus_col
+    }
+}
+
 // ── ViewRow ───────────────────────────────────────────────────────────────────
 
 /// A row in the virtual-scroll view.
@@ -245,8 +269,13 @@ pub struct App {
     proc_cpu_pct: f64,
     // Cursor position (x,y) for context menu placement
     cursor_x: f32,
-    // Right-click context menu
+    // Character-level text selection
+    pub text_sel:        Option<TextSel>,
+    mouse_selecting:     bool,
+    // Right-click context menu (position frozen at the moment of right-click)
     context_menu_line: Option<usize>,
+    context_menu_x:    f32,
+    context_menu_y:    f32,
     // Tail mode / file watching
     tail_mode: bool,
     _watcher:  Option<notify::RecommendedWatcher>,
@@ -305,6 +334,10 @@ pub enum Message {
     // Line selection / clipboard
     LineClicked(usize),
     CopyToClipboard,
+    // Character-level text selection
+    TextSelUpdate(f32),   // cursor_x; col-only update (line tracked by LineHovered)
+    TextSelClear,
+    LineHovered(usize),   // cursor moved over log row `src` (for drag-select row tracking)
     // Jump to line
     JumpOpen,
     JumpInputChanged(String),
@@ -400,7 +433,11 @@ impl App {
             proc_mem_mb:        0.0,
             proc_cpu_pct:       0.0,
             cursor_x:           0.0,
+            text_sel:           None,
+            mouse_selecting:    false,
             context_menu_line:  None,
+            context_menu_x:     0.0,
+            context_menu_y:     0.0,
             tail_mode:          false,
             _watcher:           None,
             watch_rx:           None,
@@ -423,6 +460,18 @@ impl App {
     fn clamp_scroll(&self, offset: usize) -> usize {
         let total = self.tab().map(|t| t.total_visible_lines()).unwrap_or(0);
         virtual_list::clamp_offset(offset, total, self.viewport_lines)
+    }
+
+    /// Pixel offset from the window left edge to the start of log text (char column 0).
+    fn gutter_offset(&self) -> f32 {
+        const ACTIVITY_BAR: f32 = 56.0;
+        const PIPELINE_W:   f32 = 260.0;
+        const GUTTER_STRIP: f32 = 6.0;  // 3px bookmark + 3px search-result strips
+        let pipeline_w     = self.tab().map(|t| if t.pipeline_open { PIPELINE_W } else { 0.0 }).unwrap_or(0.0);
+        let total_lines    = self.tab().map(|t| t.total_lines()).unwrap_or(1);
+        let line_num_chars = format!("{}", total_lines.max(1)).len() as f32;
+        let line_num_col   = (line_num_chars * 8.5 + 20.0_f32).max(44.0_f32);
+        ACTIVITY_BAR + pipeline_w + GUTTER_STRIP + line_num_col
     }
 
     fn recalc_viewport(&mut self) {
@@ -853,6 +902,8 @@ impl App {
                         self.jump_open = false; self.jump_input.clear();
                     } else if self.settings_open {
                         self.settings_open = false;
+                    } else if self.text_sel.is_some() {
+                        self.text_sel = None;
                     } else if let Some(t) = self.tab_mut() {
                         if t.jump_source_line.is_some() {
                             t.jump_source_line = None;
@@ -871,7 +922,36 @@ impl App {
                             return self.update(Message::ToggleBookmark(n));
                         }
                     }
-                    "c"       => return self.update(Message::CopyToClipboard),
+                    "c"       => {
+                        // If there's a non-empty character-level selection, copy it
+                        if let Some(sel) = self.text_sel {
+                            if !sel.is_empty() {
+                                let ((lo_line, lo_col), (hi_line, hi_col)) = sel.normalised();
+                                if let Some(tab) = self.tab() {
+                                    let reader = LineReader::new(
+                                        tab.file_data_arc.as_ref().as_ref(),
+                                        &tab.open_file.line_index,
+                                    );
+                                    let mut parts: Vec<String> = Vec::new();
+                                    for line_n in lo_line..=hi_line {
+                                        if let Some(raw) = reader.get_line(line_n) {
+                                            let display = tab.pipeline.apply_text_transforms(raw);
+                                            let chars: Vec<char> = display.chars().collect();
+                                            let start = if line_n == lo_line { lo_col.min(chars.len()) } else { 0 };
+                                            let end   = if line_n == hi_line { hi_col.min(chars.len()) } else { chars.len() };
+                                            parts.push(chars[start..end].iter().collect());
+                                        }
+                                    }
+                                    let text = parts.join("\n");
+                                    if !text.is_empty() {
+                                        return iced::clipboard::write(text);
+                                    }
+                                }
+                            }
+                        }
+                        // Fallback: copy whole selected line
+                        return self.update(Message::CopyToClipboard);
+                    }
                     "p"       => return self.update(Message::PaletteOpen),
                     "g"       => return self.update(Message::JumpOpen),
                     "o"       => return self.update(Message::FileOpen),
@@ -887,11 +967,45 @@ impl App {
 
             // ── Scrollbar ────────────────────────────────────────────────────
             Message::ScrollbarClicked => { self.scrollbar_dragging = true; self.scroll_to_cursor_y(); }
-            Message::ScrollbarReleased => { self.scrollbar_dragging = false; }
+            Message::ScrollbarReleased => {
+                self.scrollbar_dragging = false;
+                self.mouse_selecting    = false;
+            }
             Message::CursorMoved(x, y) => {
                 self.cursor_x = x;
                 self.scrollbar_hover_y = y;
                 if self.scrollbar_dragging { self.scroll_to_cursor_y(); }
+                if self.mouse_selecting   { return self.update(Message::TextSelUpdate(x)); }
+            }
+
+            // ── Text selection ────────────────────────────────────────────────
+            // TextSelUpdate: only update focus column from cursor_x.
+            // focus_line is updated by LineHovered (row mouse_area on_move).
+            Message::TextSelUpdate(cursor_x) => {
+                if self.mouse_selecting {
+                    let gutter_off = self.gutter_offset();
+                    let char_w     = self.font_size * 0.6;
+                    let col        = ((cursor_x - gutter_off).max(0.0) / char_w) as usize;
+                    if let Some(sel) = &mut self.text_sel {
+                        sel.focus_col = col;
+                    }
+                }
+            }
+            Message::TextSelClear => {
+                self.text_sel        = None;
+                self.mouse_selecting = false;
+            }
+            // LineHovered: fired by each row's on_move; updates focus row during drag.
+            Message::LineHovered(src) => {
+                if self.mouse_selecting {
+                    let gutter_off = self.gutter_offset();
+                    let char_w     = self.font_size * 0.6;
+                    let col        = ((self.cursor_x - gutter_off).max(0.0) / char_w) as usize;
+                    if let Some(sel) = &mut self.text_sel {
+                        sel.focus_line = src;
+                        sel.focus_col  = col;
+                    }
+                }
             }
 
             // ── Filters ──────────────────────────────────────────────────────
@@ -972,6 +1086,17 @@ impl App {
 
             // ── Line selection ────────────────────────────────────────────────
             Message::LineClicked(n) => {
+                // Start a character-level selection at the click position
+                let col = {
+                    let gutter_off = self.gutter_offset();
+                    let char_w     = self.font_size * 0.6;
+                    ((self.cursor_x - gutter_off).max(0.0) / char_w) as usize
+                };
+                self.text_sel = Some(TextSel {
+                    anchor_line: n, anchor_col: col,
+                    focus_line:  n, focus_col:  col,
+                });
+                self.mouse_selecting = true;
                 if let Some(t) = self.tab_mut() {
                     t.selected_line = if t.selected_line == Some(n) { None } else { Some(n) };
                 }
@@ -1395,6 +1520,11 @@ impl App {
             Message::RightClickLine(n) => {
                 if let Some(t) = self.tab_mut() { t.selected_line = Some(n); }
                 self.context_menu_line = if self.context_menu_line == Some(n) { None } else { Some(n) };
+                // Freeze cursor position now so the menu doesn't follow the mouse.
+                if self.context_menu_line.is_some() {
+                    self.context_menu_x = self.cursor_x;
+                    self.context_menu_y = self.scrollbar_hover_y;
+                }
             }
             Message::CloseContextMenu => { self.context_menu_line = None; }
             Message::CopyLine(n) => {
@@ -1510,6 +1640,7 @@ impl App {
             pipeline_preview_to,
             self.color_log_levels,
             h_scroll_offset,
+            self.text_sel,
             p,
         );
 
@@ -1590,7 +1721,7 @@ impl App {
             let overlay = views::recent_panel::view(&self.recent_files, p);
             stack![main_layout, overlay].into()
         } else if let Some(ctx_line) = self.context_menu_line {
-            let overlay = views::context_menu::view(ctx_line, self.cursor_x, self.scrollbar_hover_y, p);
+            let overlay = views::context_menu::view(ctx_line, self.context_menu_x, self.context_menu_y, p);
             stack![main_layout, overlay].into()
         } else {
             main_layout.into()

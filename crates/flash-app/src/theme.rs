@@ -86,6 +86,7 @@ pub struct Palette {
     pub line_number:     Color,
     pub selected_line:   Color,
     pub context_row_bg:  Color,
+    pub selection_bg:    Color,   // character-level text selection highlight
 }
 
 impl Palette {
@@ -137,6 +138,7 @@ fn mocha() -> Palette {
         line_number:     c(0x6c, 0x70, 0x86),
         selected_line:   Color::from_rgba(0x89 as f32/255., 0xb4 as f32/255., 0xfa as f32/255., 0.15),
         context_row_bg:  Color::from_rgba(0.5, 0.5, 0.5, 0.08),
+        selection_bg:    Color::from_rgba(0x89 as f32/255., 0xb4 as f32/255., 0xfa as f32/255., 0.40),
     }
 }
 
@@ -163,6 +165,7 @@ fn latte() -> Palette {
         line_number:     c(0x8c, 0x8f, 0xa1),
         selected_line:   Color::from_rgba(0x1e as f32/255., 0x66 as f32/255., 0xf5 as f32/255., 0.12),
         context_row_bg:  Color::from_rgba(0.5, 0.5, 0.5, 0.08),
+        selection_bg:    Color::from_rgba(0x1e as f32/255., 0x66 as f32/255., 0xf5 as f32/255., 0.40),
     }
 }
 
@@ -189,6 +192,7 @@ fn nord() -> Palette {
         line_number:     c(0x4c, 0x56, 0x6a),
         selected_line:   Color::from_rgba(0x88 as f32/255., 0xc0 as f32/255., 0xd0 as f32/255., 0.15),
         context_row_bg:  Color::from_rgba(0.5, 0.5, 0.5, 0.08),
+        selection_bg:    Color::from_rgba(0x88 as f32/255., 0xc0 as f32/255., 0xd0 as f32/255., 0.40),
     }
 }
 
@@ -215,6 +219,7 @@ fn tokyo_night() -> Palette {
         line_number:     c(0x3b, 0x3d, 0x57),
         selected_line:   Color::from_rgba(0x7a as f32/255., 0xa2 as f32/255., 0xf7 as f32/255., 0.15),
         context_row_bg:  Color::from_rgba(0.5, 0.5, 0.5, 0.08),
+        selection_bg:    Color::from_rgba(0x7a as f32/255., 0xa2 as f32/255., 0xf7 as f32/255., 0.40),
     }
 }
 
@@ -241,6 +246,7 @@ fn gruvbox_dark() -> Palette {
         line_number:     c(0x50, 0x49, 0x45),
         selected_line:   Color::from_rgba(0x83 as f32/255., 0xa5 as f32/255., 0x98 as f32/255., 0.18),
         context_row_bg:  Color::from_rgba(0.5, 0.5, 0.5, 0.08),
+        selection_bg:    Color::from_rgba(0x83 as f32/255., 0xa5 as f32/255., 0x98 as f32/255., 0.45),
     }
 }
 
@@ -269,6 +275,7 @@ fn light_web() -> Palette {
         line_number:     c(0x94, 0xA3, 0xB8),  // slate-400
         selected_line:   Color::from_rgba(0x25 as f32/255., 0x63 as f32/255., 0xEB as f32/255., 0.10),
         context_row_bg:  Color::from_rgba(0.0, 0.0, 0.0, 0.03),
+        selection_bg:    Color::from_rgba(0x25 as f32/255., 0x63 as f32/255., 0xEB as f32/255., 0.35),
     }
 }
 
@@ -296,6 +303,7 @@ fn one_dark() -> Palette {
         line_number:     c(0x4B, 0x52, 0x63),
         selected_line:   Color::from_rgba(0x61 as f32/255., 0xAF as f32/255., 0xEF as f32/255., 0.15),
         context_row_bg:  Color::from_rgba(0.5, 0.5, 0.5, 0.08),
+        selection_bg:    Color::from_rgba(0x61 as f32/255., 0xAF as f32/255., 0xEF as f32/255., 0.40),
     }
 }
 
