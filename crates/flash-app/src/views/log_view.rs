@@ -99,7 +99,10 @@ pub fn view<'a>(
     let display_strings: Vec<String> = render_rows.iter().map(|ri| {
         let raw = reader.get_line(ri.src).unwrap_or("");
         if let Some(pl) = pipeline {
-            if let Some(preview_id) = pipeline_preview_to {
+            if pipeline_preview_to == Some(0) {
+                // "Original" preview — no transforms
+                raw.to_string()
+            } else if let Some(preview_id) = pipeline_preview_to {
                 pl.apply_text_transforms_up_to(raw, preview_id).into_owned()
             } else {
                 pl.apply_text_transforms(raw).into_owned()
@@ -524,6 +527,14 @@ pub fn view<'a>(
 
     let status_text = if let Some(jl) = jump_source {
         format!("RAW VIEW  line {} of {}  —  Esc or <- back to return to pipeline view", jl + 1, total_lines)
+    } else if pipeline_preview_to == Some(0) {
+        format!(
+            "ORIGINAL  Lines {}-{} of {}  ({:.0}%)  —  showing raw unfiltered file",
+            scroll_offset + 1,
+            (scroll_offset + viewport_lines).min(total_lines),
+            total_lines,
+            scroll_pct,
+        )
     } else if pipeline_preview_to.is_some() {
         let visible = view_rows.map(|r| r.len()).unwrap_or(total_lines);
         format!(

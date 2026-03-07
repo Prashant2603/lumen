@@ -67,6 +67,59 @@ pub fn view<'a>(
     // ── Layer cards ───────────────────────────────────────────────────────────
     let mut layer_cards: Vec<Element<'a, Message>> = Vec::new();
 
+    // ── "Original" row — always at the top ──────────────────────────────────
+    {
+        // "Original" is active when preview_to is Some(0) (special sentinel)
+        let is_original_active = preview_to == Some(0);
+        let orig_fg = if is_original_active { acc } else { fg };
+        let orig_bg_rest = if is_original_active { Color { a: 0.15, ..acc } } else { Color::TRANSPARENT };
+        let orig_bdr_c   = if is_original_active { Color { a: 0.6, ..acc } } else { Color { a: 0.25, ..bdr } };
+        let orig_bdr_w   = if is_original_active { 1.5 } else { 1.0 };
+
+        let preview_btn = button(
+            text(if is_original_active { "[>] on" } else { "[>]" }).size(12).color(if is_original_active { acc } else { fgm })
+        )
+        .on_press(Message::PipelinePreviewLayer(if is_original_active { None } else { Some(0) }))
+        .padding([2, 5])
+        .style(move |_: &iced::Theme, status| button::Style {
+            background: Some(match status {
+                button::Status::Hovered => Color { a: 0.25, ..acc }.into(),
+                _ => orig_bg_rest.into(),
+            }),
+            text_color: if is_original_active { acc } else { fgm },
+            border: iced::Border {
+                color: Color { a: if is_original_active { 0.5 } else { 0.0 }, ..acc },
+                width: 1.0,
+                radius: 3.0.into(),
+            },
+            shadow: iced::Shadow::default(),
+        });
+
+        let orig_row = row![
+            text("Original").size(13).color(orig_fg),
+            iced::widget::Space::with_width(Length::Fill),
+            preview_btn,
+        ]
+        .spacing(4)
+        .align_y(iced::alignment::Vertical::Center);
+
+        let orig_card_bg = p.bg_primary;
+        let orig_card = container(orig_row.width(Length::Fill))
+            .width(Length::Fill)
+            .padding([8, 10])
+            .style(move |_: &iced::Theme| container::Style {
+                background: Some(orig_card_bg.into()),
+                border: iced::Border {
+                    color: orig_bdr_c,
+                    width: orig_bdr_w,
+                    radius: 4.0.into(),
+                },
+                ..Default::default()
+            });
+
+        layer_cards.push(orig_card.into());
+    }
+
     for (pos, ul) in pipeline.layers.iter().enumerate() {
         let id         = ul.layer.id;
         let enabled    = ul.layer.enabled;

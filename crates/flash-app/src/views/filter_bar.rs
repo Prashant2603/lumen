@@ -16,6 +16,7 @@ pub fn view<'a>(
     tail_mode:           bool,
     recent_open:         bool,
     has_recent:          bool,
+    search_on_enter:     bool,
     p:                   Palette,
 ) -> Element<'a, Message> {
     let _ = hidden_levels; // level filter handler code kept, UI hidden
@@ -51,7 +52,11 @@ pub fn view<'a>(
     bar = bar.push(divider(p));
 
     // ── Search / filter input ─────────────────────────────────────────────────
-    let placeholder = if filter_is_regex { "regex filter…" } else { "filter…  (click .* for regex)" };
+    let placeholder = if filter_is_regex {
+        if search_on_enter { "regex filter… (press Enter)" } else { "regex filter…" }
+    } else {
+        if search_on_enter { "filter… (press Enter)" } else { "filter…  (click .* for regex)" }
+    };
     let filter_input = text_input(placeholder, line_filter)
         .on_input(Message::LineFilterChanged)
         .on_submit(Message::SearchSubmit)  // Enter runs background regex search + populates results panel

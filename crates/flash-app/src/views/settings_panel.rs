@@ -1,11 +1,15 @@
-use iced::widget::{button, column, container, mouse_area, row, slider, text};
+use iced::widget::{button, column, container, mouse_area, row, scrollable, slider, text};
 use iced::{Color, Element, Length};
 
-use crate::app::Message;
+use crate::app::{Message, SearchDisplayMode, SearchTrigger};
 use crate::theme::{AppTheme, Palette};
 
 /// Full-screen overlay containing a centred settings card.
-pub fn view<'a>(app_theme: AppTheme, font_size: f32, line_wrap: bool, color_log_levels: bool, bg_opacity: f32, p: Palette) -> Element<'a, Message> {
+pub fn view<'a>(
+    app_theme: AppTheme, font_size: f32, line_wrap: bool, color_log_levels: bool,
+    bg_opacity: f32, search_display_mode: SearchDisplayMode, search_trigger: SearchTrigger,
+    p: Palette,
+) -> Element<'a, Message> {
     let bg_p  = p.bg_primary;
     let bg_s  = p.bg_surface;
     let bg_h  = p.bg_hover;
@@ -175,6 +179,63 @@ pub fn view<'a>(app_theme: AppTheme, font_size: f32, line_wrap: bool, color_log_
     ]
     .spacing(6);
 
+    // ── Search section ──────────────────────────────────────────────────────
+    let search_section = {
+        let radio_btn = |label: &'a str, selected: bool, msg: Message| -> Element<'a, Message> {
+            let dot_c = if selected { acc } else { fgm };
+            let bg_sel = if selected { Color { a: 0.15, ..acc } } else { Color::TRANSPARENT };
+            button(
+                row![
+                    container(text(if selected { "●" } else { "○" }).size(12).color(dot_c))
+                        .width(Length::Fixed(20.0)),
+                    text(label).size(13).color(fg),
+                ]
+                .spacing(6)
+                .align_y(iced::alignment::Vertical::Center),
+            )
+            .on_press(msg)
+            .padding([4, 10])
+            .width(Length::Fill)
+            .style(move |_: &iced::Theme, status| button::Style {
+                background: Some(match status {
+                    button::Status::Hovered => bg_h.into(),
+                    _ => bg_sel.into(),
+                }),
+                text_color: fg,
+                border: iced::Border::default(),
+                shadow: iced::Shadow::default(),
+            })
+            .into()
+        };
+
+        column![
+            text("Search").size(13).color(acc),
+            text("Filter results in:").size(12).color(fgm),
+            radio_btn(
+                "Main Editor (filter in-place)",
+                search_display_mode == SearchDisplayMode::MainEditor,
+                Message::SetSearchDisplayMode(SearchDisplayMode::MainEditor),
+            ),
+            radio_btn(
+                "Results Panel",
+                search_display_mode == SearchDisplayMode::ResultPanel,
+                Message::SetSearchDisplayMode(SearchDisplayMode::ResultPanel),
+            ),
+            text("Search trigger:").size(12).color(fgm),
+            radio_btn(
+                "Per keystroke",
+                search_trigger == SearchTrigger::PerKeystroke,
+                Message::SetSearchTrigger(SearchTrigger::PerKeystroke),
+            ),
+            radio_btn(
+                "On Enter",
+                search_trigger == SearchTrigger::OnEnter,
+                Message::SetSearchTrigger(SearchTrigger::OnEnter),
+            ),
+        ]
+        .spacing(4)
+    };
+
     // ── Opacity section ────────────────────────────────────────────────────
     let opacity_pct = (bg_opacity * 100.0).round() as u32;
     let opacity_section = column![
@@ -252,24 +313,36 @@ pub fn view<'a>(app_theme: AppTheme, font_size: f32, line_wrap: bool, color_log_
             .into()
     };
 
-    let card = container(
+    let card_body = scrollable(
         column![
-            header,
-            mk_divider(),
             theme_section,
             mk_divider(),
             font_section,
             mk_divider(),
             wrap_section,
             mk_divider(),
+            search_section,
+            mk_divider(),
             opacity_section,
             mk_divider(),
             about,
         ]
         .spacing(12)
+        .width(Length::Fixed(300.0)),
+    )
+    .height(Length::Fill);
+
+    let card = container(
+        column![
+            header,
+            mk_divider(),
+            card_body,
+        ]
+        .spacing(12)
         .padding(20)
         .width(Length::Fixed(300.0)),
     )
+    .max_height(650.0)
     .style(move |_: &iced::Theme| container::Style {
         background: Some(bg_p.into()),
         border: iced::Border { color: bdr, width: 1.0, radius: 8.0.into() },

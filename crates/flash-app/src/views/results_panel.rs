@@ -10,9 +10,10 @@ pub fn view<'a>(
     selected_result: Option<usize>,
     search_in_progress: bool,
     compiled_regex: Option<&regex::Regex>,
+    force_show: bool,
     p: Palette,
 ) -> Element<'a, Message> {
-    if results.is_empty() && !search_in_progress {
+    if results.is_empty() && !search_in_progress && !force_show {
         return container(text("").size(1))
             .height(0)
             .width(Length::Fill)

@@ -20,6 +20,26 @@ use crate::theme::{self, AppTheme, Palette};
 use crate::views;
 use crate::widgets::virtual_list;
 
+// ── Search/filter settings ───────────────────────────────────────────────────
+
+/// Where search results are displayed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SearchDisplayMode {
+    /// Filter the main editor in-place (default).
+    MainEditor,
+    /// Show matches in the bottom results panel; main editor stays unfiltered.
+    ResultPanel,
+}
+
+/// When search is triggered.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SearchTrigger {
+    /// Search on every keystroke (good for small files).
+    PerKeystroke,
+    /// Search only when Enter is pressed (good for large files).
+    OnEnter,
+}
+
 // ── Highlight colors palette (4 slots) ───────────────────────────────────────
 
 pub const HIGHLIGHT_COLORS: [Color; 4] = [
@@ -118,6 +138,7 @@ pub struct Tab {
     pub jump_source_line:      Option<usize>,
     pub pipeline_preview_to:   Option<u64>,   // layer id up to which we preview
     pub filter_regex:          Option<regex::Regex>, // compiled filter regex (when regex mode on)
+    pub skip_text_filter:      bool,          // true when search results go to panel, not main editor
     pub h_scroll_offset:       usize,         // horizontal char offset (non-wrap mode)
 }
 
@@ -151,9 +172,9 @@ impl Tab {
         let data: &[u8]       = self.file_data_arc.as_ref().as_ref();
         let line_index        = &self.open_file.line_index;
         let reader            = LineReader::new(data, line_index);
-        let q_lower           = self.line_filter_query.to_lowercase();
+        let q_lower           = if self.skip_text_filter { String::new() } else { self.line_filter_query.to_lowercase() };
         let hidden_levels     = &self.hidden_levels;
-        let filter_regex      = &self.filter_regex;
+        let filter_regex      = if self.skip_text_filter { &None } else { &self.filter_regex };
 
         let post_quick: Vec<usize> = filtered.into_iter().filter(|&i| {
             if !hidden_levels.is_empty() {
@@ -249,6 +270,9 @@ pub struct App {
     pub line_wrap: bool,
     // Filter regex mode
     pub filter_is_regex:    bool,
+    // Search/filter settings
+    pub search_display_mode: SearchDisplayMode,
+    pub search_trigger:      SearchTrigger,
     // Color lines by log level
     pub color_log_levels:   bool,
     // Jump to line modal
@@ -408,6 +432,9 @@ pub enum Message {
     ToggleContext(usize),              // toggle context expansion for anchor line
     JumpToSource(usize),              // bypass pipeline, show raw line
     JumpToSourceClear,                // return to pipeline view
+    // Search/filter settings
+    SetSearchDisplayMode(SearchDisplayMode),
+    SetSearchTrigger(SearchTrigger),
     Noop,
 }
 
@@ -430,6 +457,8 @@ impl App {
             info_panel_open:    true,
             line_wrap:          false,
             filter_is_regex:    false,
+            search_display_mode: SearchDisplayMode::MainEditor,
+            search_trigger:      SearchTrigger::PerKeystroke,
             color_log_levels:   false,
             jump_open:          false,
             jump_input:         String::new(),
@@ -775,6 +804,10 @@ impl App {
             PaletteCmd { label: "Next Bookmark".into(),      shortcut: "F2",     action: Message::NextBookmark },
             PaletteCmd { label: "Prev Bookmark".into(),      shortcut: "⇧F2",    action: Message::PrevBookmark },
             PaletteCmd { label: "Toggle Pipeline".into(),    shortcut: "",       action: Message::TogglePipeline },
+            PaletteCmd { label: "Search: Filter in Main Editor".into(), shortcut: "", action: Message::SetSearchDisplayMode(SearchDisplayMode::MainEditor) },
+            PaletteCmd { label: "Search: Show in Results Panel".into(), shortcut: "", action: Message::SetSearchDisplayMode(SearchDisplayMode::ResultPanel) },
+            PaletteCmd { label: "Search: Trigger Per Keystroke".into(), shortcut: "", action: Message::SetSearchTrigger(SearchTrigger::PerKeystroke) },
+            PaletteCmd { label: "Search: Trigger On Enter".into(),     shortcut: "", action: Message::SetSearchTrigger(SearchTrigger::OnEnter) },
         ];
         if has_file {
             cmds.push(PaletteCmd { label: "Clear Search & Filters".into(), shortcut: "", action: Message::Clear });
@@ -840,7 +873,15 @@ impl App {
 
             Message::FileLoaded(result) => {
                 if let Ok((path, gz_data)) = result {
-                    if let Some(tab) = build_tab(path.clone(), gz_data) {
+                    if let Some(mut tab) = build_tab(path.clone(), gz_data) {
+                        // Set skip_text_filter based on current display mode
+                        tab.skip_text_filter = self.search_display_mode == SearchDisplayMode::ResultPanel;
+                        // Auto-detect search trigger based on file size
+                        let file_size = tab.file_data_arc.as_ref().as_ref().len();
+                        const LARGE_FILE_THRESHOLD: usize = 50 * 1024 * 1024; // 50 MB
+                        if file_size >= LARGE_FILE_THRESHOLD {
+                            self.search_trigger = SearchTrigger::OnEnter;
+                        }
                         self.tabs.push(tab);
                         self.active_tab = self.tabs.len() - 1;
                         self.recent_files.retain(|p| p != &path);
@@ -974,16 +1015,32 @@ impl App {
                 if let Some(t) = self.tab_mut() { t.search_query = query; }
             }
             Message::SearchSubmit => {
-                let Some(tab) = self.tab_mut() else { return Task::none(); };
-                if tab.search_query.is_empty() { tab.clear_search(); return Task::none(); }
-                tab.compiled_search_regex = regex::Regex::new(&tab.search_query).ok();
-                tab.search_handle.cancel();
-                tab.search_results.clear();
-                tab.search_result_set.clear();
-                tab.selected_result    = None;
-                tab.search_in_progress = true;
-                let q = tab.search_query.clone();
-                tab.search_handle.search(q.clone());
+                let display_mode = self.search_display_mode;
+                let trigger      = self.search_trigger;
+                let is_regex     = self.filter_is_regex;
+                let q = {
+                    let Some(tab) = self.tab_mut() else { return Task::none(); };
+                    if tab.search_query.is_empty() { tab.clear_search(); return Task::none(); }
+
+                    if display_mode == SearchDisplayMode::MainEditor && trigger == SearchTrigger::OnEnter {
+                        // Now apply the filter that was deferred
+                        tab.filter_regex = if is_regex && !tab.line_filter_query.is_empty() {
+                            regex::Regex::new(&tab.line_filter_query).ok()
+                        } else { None };
+                        let output = tab.last_pipeline_output.clone();
+                        tab.rebuild_view_rows_from_filter(output);
+                    }
+                    // Run background search for results panel / highlights
+                    tab.compiled_search_regex = regex::Regex::new(&tab.search_query).ok();
+                    tab.search_handle.cancel();
+                    tab.search_results.clear();
+                    tab.search_result_set.clear();
+                    tab.selected_result    = None;
+                    tab.search_in_progress = true;
+                    let q = tab.search_query.clone();
+                    tab.search_handle.search(q.clone());
+                    q
+                };
                 self.push_search_history(q);
                 self.history_cursor = None;
             }
@@ -1533,6 +1590,8 @@ impl App {
                 self.recalc_viewport();
             }
             Message::LineFilterChanged(query) => {
+                let display_mode = self.search_display_mode;
+                let trigger      = self.search_trigger;
                 {
                     let is_regex = self.filter_is_regex;
                     let Some(tab) = self.tab_mut() else { return Task::none(); };
@@ -1542,8 +1601,33 @@ impl App {
                     tab.filter_regex = if is_regex && !query.is_empty() {
                         regex::Regex::new(&query).ok()
                     } else { None };
-                    let output = tab.last_pipeline_output.clone();
-                    tab.rebuild_view_rows_from_filter(output);
+
+                    match display_mode {
+                        SearchDisplayMode::MainEditor => {
+                            // Only filter on each keystroke when trigger is PerKeystroke
+                            if trigger == SearchTrigger::PerKeystroke {
+                                let output = tab.last_pipeline_output.clone();
+                                tab.rebuild_view_rows_from_filter(output);
+                            }
+                            // OnEnter: don't filter yet, wait for SearchSubmit
+                        }
+                        SearchDisplayMode::ResultPanel => {
+                            // In result-panel mode, don't filter the main editor
+                            // Just update the query text; search runs on Enter (or per-keystroke)
+                            if trigger == SearchTrigger::PerKeystroke && !query.is_empty() {
+                                // Auto-trigger background search per keystroke
+                                tab.compiled_search_regex = regex::Regex::new(&query).ok();
+                                tab.search_handle.cancel();
+                                tab.search_results.clear();
+                                tab.search_result_set.clear();
+                                tab.selected_result    = None;
+                                tab.search_in_progress = true;
+                                tab.search_handle.search(query.clone());
+                            } else if query.is_empty() {
+                                tab.clear_search();
+                            }
+                        }
+                    }
                 }
                 self.recalc_viewport();
             }
@@ -1582,6 +1666,35 @@ impl App {
             Message::SetTheme(t)     => { self.app_theme = t; }
             Message::SetOpacity(v)   => { self.bg_opacity = v.clamp(0.0, 1.0); }
             Message::ToggleSettings  => { self.settings_open = !self.settings_open; }
+            Message::SetSearchDisplayMode(mode) => {
+                self.search_display_mode = mode;
+                if let Some(tab) = self.tab_mut() {
+                    tab.skip_text_filter = mode == SearchDisplayMode::ResultPanel;
+                }
+                // When switching to MainEditor, re-apply filter immediately
+                if mode == SearchDisplayMode::MainEditor {
+                    let is_regex = self.filter_is_regex;
+                    if let Some(tab) = self.tab_mut() {
+                        tab.filter_regex = if is_regex && !tab.line_filter_query.is_empty() {
+                            regex::Regex::new(&tab.line_filter_query).ok()
+                        } else { None };
+                        let output = tab.last_pipeline_output.clone();
+                        tab.rebuild_view_rows_from_filter(output);
+                    }
+                    self.recalc_viewport();
+                }
+                // When switching to ResultPanel, rebuild without text filter
+                if mode == SearchDisplayMode::ResultPanel {
+                    if let Some(tab) = self.tab_mut() {
+                        let output = tab.last_pipeline_output.clone();
+                        tab.rebuild_view_rows_from_filter(output);
+                    }
+                    self.recalc_viewport();
+                }
+            }
+            Message::SetSearchTrigger(trigger) => {
+                self.search_trigger = trigger;
+            }
             Message::ToggleInfoPanel => { self.info_panel_open = !self.info_panel_open; }
             Message::WrapToggle => {
                 self.line_wrap = !self.line_wrap;
@@ -1793,6 +1906,21 @@ impl App {
                     None => {
                         // Clear preview → re-run full pipeline
                         self.trigger_pipeline();
+                    }
+                    Some(0) => {
+                        // Special "Original" preview — show all lines, no pipeline
+                        let already = self.tab().and_then(|t| t.pipeline_preview_to) == Some(0);
+                        if already {
+                            self.trigger_pipeline();
+                        } else {
+                            let Some(tab) = self.tab_mut() else { return Task::none(); };
+                            tab.pipeline_preview_to = Some(0);
+                            let all: Vec<usize> = (0..tab.total_lines()).collect();
+                            tab.last_pipeline_output = all.clone();
+                            tab.rebuild_view_rows_from_filter(all);
+                            tab.pipeline_stale = false;
+                            self.recalc_viewport();
+                        }
                     }
                     Some(id) => {
                         // Toggle: clicking the same layer again clears the preview
@@ -2135,9 +2263,12 @@ impl App {
         let extra_highlights = active.map(|t| t.extra_highlights.as_slice()).unwrap_or(&[]);
 
         let filter_count: Option<usize> = active.and_then(|t| {
+            // In ResultPanel mode, filter text doesn't affect view_rows, so don't show line count for it
+            let text_filtering = self.search_display_mode == SearchDisplayMode::MainEditor
+                && !t.line_filter_query.is_empty();
             if t.pipeline.has_active_filter_layers()
                || !t.hidden_levels.is_empty()
-               || !t.line_filter_query.is_empty()
+               || text_filtering
             {
                 let cnt = t.view_rows.iter().filter(|r| matches!(r, ViewRow::Line(_))).count();
                 Some(cnt)
@@ -2146,10 +2277,11 @@ impl App {
             }
         });
 
+        let search_on_enter = self.search_trigger == SearchTrigger::OnEnter;
         let filter_bar = views::filter_bar::view(
             hidden_levels, line_filter_q, has_file, filter_count,
             extra_highlights, self.line_wrap, self.filter_is_regex, self.tail_mode,
-            self.recent_files_open, !self.recent_files.is_empty(), p,
+            self.recent_files_open, !self.recent_files.is_empty(), search_on_enter, p,
         );
 
         // ── Log view ──────────────────────────────────────────────────────────
@@ -2189,8 +2321,10 @@ impl App {
         );
 
         let selected_result = active.and_then(|t| t.selected_result);
+        let force_results = self.search_display_mode == SearchDisplayMode::ResultPanel
+            && active.map(|t| !t.search_query.is_empty()).unwrap_or(false);
         let results_panel = views::results_panel::view(
-            search_results, selected_result, search_in_progress, compiled_regex, p,
+            search_results, selected_result, search_in_progress, compiled_regex, force_results, p,
         );
 
         // ── Right info panel ──────────────────────────────────────────────────
@@ -2259,7 +2393,10 @@ impl App {
             let overlay = views::jump_to_line::view(&self.jump_input, total, p);
             stack![main_layout, overlay].into()
         } else if self.settings_open {
-            let overlay = views::settings_panel::view(self.app_theme, self.font_size, self.line_wrap, self.color_log_levels, self.bg_opacity, p);
+            let overlay = views::settings_panel::view(
+                self.app_theme, self.font_size, self.line_wrap, self.color_log_levels,
+                self.bg_opacity, self.search_display_mode, self.search_trigger, p,
+            );
             stack![main_layout, overlay].into()
         } else if self.recent_files_open {
             let overlay = views::recent_panel::view(&self.recent_files, p);
@@ -2435,6 +2572,7 @@ fn build_tab(path: PathBuf, gz_data: Option<Vec<u8>>) -> Option<Tab> {
         jump_source_line:      None,
         pipeline_preview_to:   None,
         filter_regex:          None,
+        skip_text_filter:      false,
         h_scroll_offset:       0,
     })
 }
