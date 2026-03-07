@@ -124,7 +124,9 @@ pub fn view<'a>(
         display_strings.iter().map(|s| s.chars().count()).max().unwrap_or(0) + h_scroll_offset
     } else { 0 };
 
-    let total_for_digits = total_lines;
+    // Use the full file line count for digit width so source line numbers always fit,
+    // even when filtering reduces visible lines to a small subset.
+    let total_for_digits = reader.line_count().max(total_lines);
     let line_num_chars   = format!("{}", total_for_digits).len();
     let line_num_col_w   = Length::Fixed((line_num_chars as f32 * 8.5 + 20.0).max(44.0));
     // Always Fill so clicking anywhere on a row (including empty right-side area) registers.
