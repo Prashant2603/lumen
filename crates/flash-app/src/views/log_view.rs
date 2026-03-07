@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use flash_core::{LineReader, LogLevel};
-use iced::widget::{button, column, container, mouse_area, rich_text, row, span, text, Column, Row};
+use iced::widget::{button, column, container, mouse_area, rich_text, row, slider, span, text, Column};
 use iced::{Color, Element, Length};
 
 use crate::app::{ExtraHighlight, Message, TextSel, ViewRow};
@@ -30,6 +30,7 @@ pub fn view<'a>(
     color_log_levels:    bool,
     h_scroll_offset:     usize,
     text_sel:            Option<TextSel>,
+    block_cursor:        bool,
     p:                   Palette,
 ) -> Element<'a, Message> {
     if reader.is_none() || total_lines == 0 {
@@ -173,7 +174,7 @@ pub fn view<'a>(
             .width(line_num_col_w)
             .padding(iced::Padding { top: 2.0, right: 6.0, bottom: 2.0, left: 6.0 });
 
-            let text_w = if line_wrap { Length::Fill } else { Length::Shrink };
+            let ctx_text_w = if line_wrap { Length::Fill } else { Length::Shrink };
             let wrap_mode = if line_wrap {
                 iced::widget::text::Wrapping::WordOrGlyph
             } else {
@@ -184,9 +185,9 @@ pub fn view<'a>(
                     .size(font_size)
                     .font(iced::Font::MONOSPACE)
                     .wrapping(wrap_mode)
-                    .width(text_w),
+                    .width(ctx_text_w),
             )
-            .width(text_w)
+            .width(ctx_text_w)
             .padding(iced::Padding { top: 2.0, right: 10.0, bottom: 2.0, left: 0.0 })
             .style(move |_: &iced::Theme| container::Style {
                 background: Some(ctx_bg.into()),
@@ -309,12 +310,46 @@ pub fn view<'a>(
         if let Some((sel_start, sel_end)) = sel_range {
             let start = sel_start.min(char_count);
             let end   = if sel_end == usize::MAX { char_count } else { sel_end.min(char_count) };
-            let sel_bg = ghost(p.selection_bg, pipeline_stale);
+            let base  = ghost(p.selection_bg, pipeline_stale);
+            let sel_bg = Color { a: (base.a * 1.4).min(0.65), ..base };
             for i in start..end { bg_ann[i] = Some(sel_bg); }
         }
 
+        // ── Cursor (caret) ──────────────────────────────────────────────────
+        // Block cursor (Insert toggles): inverted colors on the character.
+        // Line cursor (default): accent-colored background on the character,
+        //   keeping original fg — NO extra characters inserted (that would
+        //   shift text and break coordinate mapping).
+        let cursor_col_on_this_line: Option<usize> = text_sel.and_then(|sel| {
+            if src == sel.focus_line {
+                let col = sel.focus_col.saturating_sub(h_scroll_offset);
+                Some(col)
+            } else {
+                None
+            }
+        });
+
+        let caret_color = ghost(p.accent, pipeline_stale);
+        let cursor_at_eol = if let Some(cc) = cursor_col_on_this_line {
+            if cc < char_count {
+                if block_cursor {
+                    // Block: invert colors
+                    fg_ann[cc] = p.bg_primary;
+                    bg_ann[cc] = Some(caret_color);
+                } else {
+                    // Line: accent background, keep original fg
+                    bg_ann[cc] = Some(Color { a: 0.45, ..caret_color });
+                }
+                false
+            } else {
+                true // cursor past end of line
+            }
+        } else {
+            false
+        };
+
         // Merge consecutive same-styled chars into spans
-        let text_spans: Vec<_> = if char_count == 0 {
+        let mut text_spans: Vec<_> = if char_count == 0 {
             vec![span("".to_string()).color(line_color)]
         } else {
             let mut spans = Vec::new();
@@ -338,17 +373,18 @@ pub fn view<'a>(
             spans
         };
 
-        // ── Row-level selection range check ───────────────────────────────────
-        // All rows between anchor and focus (inclusive) get the selection background.
-        // This gives a clear, full-height highlight even for rows with short lines.
-        let in_text_sel = text_sel.map_or(false, |sel| {
-            if sel.is_empty() { return false; }
-            let ((lo_line, _), (hi_line, _)) = sel.normalised();
-            src >= lo_line && src <= hi_line
-        });
+        // Append cursor indicator at end of line (only character we add — at EOL so no shift).
+        // Only in block cursor mode (inverted space). Line cursor mode uses background-only
+        // styling on existing characters, so nothing to append at EOL (avoids extra width).
+        if (cursor_at_eol || (cursor_col_on_this_line.is_some() && char_count == 0)) && block_cursor {
+            text_spans.push(span(" ".to_string()).color(p.bg_primary).background(caret_color));
+        }
 
-        // Row background — priority: text-sel > selected > search match > extra hl > alternating stripe
-        let extra_hl_bg: Option<Color> = if !is_search_match && !is_selected && !in_text_sel {
+        // Row background — priority: selected > search match > extra hl > alternating stripe
+        // Note: text selection is handled per-character via span backgrounds (sel_range above),
+        // NOT via full-row background — otherwise the whole row looks the same and you can't
+        // tell which characters are actually selected.
+        let extra_hl_bg: Option<Color> = if !is_search_match && !is_selected {
             extra_highlights
                 .iter()
                 .find(|eh| eh.regex.as_ref().map_or(false, |re| re.is_match(display_text)))
@@ -360,9 +396,7 @@ pub fn view<'a>(
         // Use view-row index (not src) so stripes always alternate visually after filtering
         let alt_row_bg: Option<Color> = if (scroll_offset + idx) % 2 == 1 { Some(p.bg_alt_row) } else { None };
 
-        let row_bg = if in_text_sel {
-            Some(ghost(p.selection_bg, pipeline_stale))
-        } else if is_selected {
+        let row_bg = if is_selected {
             Some(p.selected_line)
         } else if is_search_match {
             Some(p.search_row_bg)
@@ -464,8 +498,9 @@ pub fn view<'a>(
             .width(Length::Fill)
             .height(Length::Shrink);
         let clickable_content = mouse_area(row_container)
-            .on_press(Message::LineClicked(src))
+            .on_release(Message::LineClicked(src))
             .on_right_press(Message::RightClickLine(src))
+            .on_enter(Message::LineHovered(src))
             .on_move(move |_| Message::LineHovered(src))
             .interaction(iced::mouse::Interaction::Text);
 
@@ -525,8 +560,9 @@ pub fn view<'a>(
     let pbg = p.bg_primary;
     let log_content = Column::with_children(rows);
 
-    let content_w = if line_wrap { Length::Fill } else { Length::Shrink };
-    let content_area: Element<'a, Message> = container(log_content.width(content_w))
+    // Always Fill — the outer container has clip(true) so long lines get clipped.
+    // Using Shrink here caused rows (all Fill-width) to collapse to 0 width on some platforms.
+    let content_area: Element<'a, Message> = container(log_content.width(Length::Fill))
         .width(Length::Fill)
         .height(Length::Fill)
         .clip(true)
@@ -544,65 +580,49 @@ pub fn view<'a>(
     let main_area = row![content_area, minimap].height(Length::Fill);
 
     // ── Horizontal scrollbar (non-wrap mode) ─────────────────────────────────
-    // Always shown in non-wrap mode (we already returned early if no file is open).
-    // A full-width thumb means all content fits; thumb shrinks/moves as user scrolls.
+    // Uses an iced slider widget for native click + drag support.
     let h_scrollbar: Option<Element<'a, Message>> = if !line_wrap {
         let sbg2    = p.bg_secondary;
         let sbdr2   = p.border;
         let thumb_c = p.fg_muted;
 
-        // Assume ~80 chars are visible in the viewport at any time.
-        let visible_chars: f32 = 80.0;
-        let total_chars: f32   = (max_visible_len.max(h_scroll_offset + 1) as f32).max(81.0);
-        let thumb_frac: f32    = (visible_chars / total_chars).clamp(0.05, 1.0);
-        let pos_frac:   f32    = (h_scroll_offset as f32 / total_chars)
-            .clamp(0.0, (1.0 - thumb_frac).max(0.0));
+        // Max scroll range = longest visible line length (at least 1 beyond current offset)
+        let max_scroll: f32 = (max_visible_len.max(h_scroll_offset + 1) as f32).max(1.0);
 
-        // Scale to integer parts for FillPortion (total = 1000 parts).
-        let total_parts: u32 = 1000;
-        let thumb_parts: u16 = ((thumb_frac * total_parts as f32) as u32).max(20).min(980) as u16;
-        let left_parts:  u16 = (pos_frac * total_parts as f32) as u16;
-        let right_parts: u16 = (total_parts as u16).saturating_sub(left_parts + thumb_parts);
+        let rail_bg   = Color { a: 0.0, ..sbg2 };          // transparent rail
+        let thumb_bg  = Color { a: 0.75, ..thumb_c };
+        let thumb_hov = Color { a: 0.95, ..thumb_c };
 
-        let thumb_bg = Color { a: 0.75, ..thumb_c };
-        let thumb_style = move |_: &iced::Theme| container::Style {
-            background: Some(thumb_bg.into()),
-            border: iced::Border { radius: 2.0.into(), ..Default::default() },
-            ..Default::default()
-        };
-
-        // Three-segment row: [left spacer] [thumb] [right spacer]
-        let mut track_children: Vec<Element<'a, Message>> = Vec::new();
-        if left_parts > 0 {
-            track_children.push(
-                container(text("").size(1))
-                    .width(Length::FillPortion(left_parts))
-                    .height(Length::Fixed(4.0))
-                    .into(),
-            );
-        }
-        track_children.push(
-            container(text("").size(1))
-                .width(Length::FillPortion(thumb_parts.max(1)))
-                .height(Length::Fixed(4.0))
-                .style(thumb_style)
-                .into(),
-        );
-        if right_parts > 0 {
-            track_children.push(
-                container(text("").size(1))
-                    .width(Length::FillPortion(right_parts))
-                    .height(Length::Fixed(4.0))
-                    .into(),
-            );
-        }
-
-        let track_row = Row::with_children(track_children).height(Length::Fixed(4.0));
-
-        let bar = container(track_row)
+        let hbar = slider(0.0..=max_scroll, h_scroll_offset as f32, Message::HScrollTo)
             .width(Length::Fill)
-            .height(Length::Fixed(10.0))
-            .padding(iced::Padding { top: 3.0, bottom: 3.0, left: 0.0, right: 0.0 })
+            .height(10.0)
+            .style(move |_: &iced::Theme, status| {
+                let handle_bg = match status {
+                    slider::Status::Hovered | slider::Status::Dragged => thumb_hov,
+                    _ => thumb_bg,
+                };
+                slider::Style {
+                    rail: slider::Rail {
+                        backgrounds: (rail_bg.into(), rail_bg.into()),
+                        width: 4.0,
+                        border: iced::Border::default(),
+                    },
+                    handle: slider::Handle {
+                        shape: slider::HandleShape::Rectangle {
+                            width: 40,
+                            border_radius: 2.0.into(),
+                        },
+                        background: handle_bg.into(),
+                        border_width: 0.0,
+                        border_color: Color::TRANSPARENT,
+                    },
+                }
+            });
+
+        let bar = container(hbar)
+            .width(Length::Fill)
+            .height(Length::Fixed(14.0))
+            .padding(iced::Padding { top: 2.0, bottom: 2.0, left: 0.0, right: 0.0 })
             .style(move |_: &iced::Theme| container::Style {
                 background: Some(sbg2.into()),
                 border: iced::Border { color: sbdr2, width: 1.0, radius: 0.0.into() },

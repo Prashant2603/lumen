@@ -24,9 +24,11 @@ fn main() -> iced::Result {
     iced::application(App::title, App::update, App::view)
         .theme(App::theme)
         .subscription(App::subscription)
+        .transparent(true)
         .window(window::Settings {
             size: Size::new(1200.0, 800.0),
             min_size: Some(Size::new(600.0, 400.0)),
+            transparent: true,
             icon: make_icon(),
             ..Default::default()
         })

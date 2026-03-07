@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Instant;
 
 use flash_core::{
     spawn_pipeline_worker, spawn_search_worker, FileMap, LineIndex, LineReader,
@@ -241,6 +242,7 @@ pub struct App {
     modifiers: iced::keyboard::Modifiers,
     // Theme / settings
     app_theme:       AppTheme,
+    pub bg_opacity:  f32,  // 0.0 = fully transparent, 1.0 = fully opaque
     settings_open:   bool,
     info_panel_open: bool,
     // Line wrap
@@ -272,6 +274,11 @@ pub struct App {
     // Character-level text selection
     pub text_sel:        Option<TextSel>,
     mouse_selecting:     bool,
+    hovered_line:        Option<usize>,  // last line the cursor was over (from mouse_area on_enter/on_move)
+    log_area_top_cal:    Option<f32>,    // calibrated log area top (from LineHovered + cursor_y)
+    last_click_time:     Option<Instant>, // for double/triple-click detection
+    click_count:         u32,             // 1=single, 2=double, 3=triple
+    pub block_cursor:    bool,            // false=line caret (default), true=block (Insert toggles)
     // Right-click context menu (position frozen at the moment of right-click)
     context_menu_line: Option<usize>,
     context_menu_x:    f32,
@@ -330,11 +337,13 @@ pub enum Message {
     ModifiersChanged(iced::keyboard::Modifiers),
     // Theme / settings
     SetTheme(AppTheme),
+    SetOpacity(f32),
     ToggleSettings,
     // Line selection / clipboard
     LineClicked(usize),
     CopyToClipboard,
     // Character-level text selection
+    LeftMouseDown,        // global left-button press — starts selection (rich_text eats on_press)
     TextSelUpdate(f32),   // cursor_x; col-only update (line tracked by LineHovered)
     TextSelClear,
     LineHovered(usize),   // cursor moved over log row `src` (for drag-select row tracking)
@@ -376,10 +385,12 @@ pub enum Message {
     ToggleRecentFiles,
     // Horizontal scroll (non-wrap mode, Shift+wheel)
     HScrollBy(i64),
+    HScrollTo(f32),  // slider-based scrollbar: absolute position (char offset as f32)
     // Right-click context menu
     RightClickLine(usize),
     CloseContextMenu,
     CopyLine(usize),   // carries line index directly — immune to race with CloseContextMenu
+    CopySelection,     // copy the current text_sel to clipboard (context menu)
     // Pipeline
     TogglePipeline,
     PipelinePreviewLayer(Option<u64>),  // None = clear preview
@@ -414,6 +425,7 @@ impl App {
             font_size:          16.0,
             modifiers:          iced::keyboard::Modifiers::default(),
             app_theme:          AppTheme::CatppuccinMocha,
+            bg_opacity:         1.0,
             settings_open:      false,
             info_panel_open:    true,
             line_wrap:          false,
@@ -435,6 +447,11 @@ impl App {
             cursor_x:           0.0,
             text_sel:           None,
             mouse_selecting:    false,
+            hovered_line:       None,
+            log_area_top_cal:   None,
+            last_click_time:    None,
+            click_count:        0,
+            block_cursor:       false,
             context_menu_line:  None,
             context_menu_x:     0.0,
             context_menu_y:     0.0,
@@ -452,7 +469,14 @@ impl App {
         }
     }
 
-    fn palette(&self) -> Palette { theme::palette(self.app_theme) }
+    fn palette(&self) -> Palette {
+        let p = theme::palette(self.app_theme);
+        if self.bg_opacity < 1.0 {
+            theme::apply_opacity(p, self.bg_opacity)
+        } else {
+            p
+        }
+    }
 
     fn tab(&self)     -> Option<&Tab>     { self.tabs.get(self.active_tab) }
     fn tab_mut(&mut self) -> Option<&mut Tab> { self.tabs.get_mut(self.active_tab) }
@@ -472,6 +496,181 @@ impl App {
         let line_num_chars = format!("{}", total_lines.max(1)).len() as f32;
         let line_num_col   = (line_num_chars * 8.5 + 20.0_f32).max(44.0_f32);
         ACTIVITY_BAR + pipeline_w + GUTTER_STRIP + line_num_col
+    }
+
+    /// Top of the log content area (y pixels from window top).
+    fn log_area_top(&self) -> f32 {
+        let sep_h = if self.tabs.len() > 1 { 34.0_f32 } else { 1.0 };
+        sep_h + 38.0 // tab-bar/separator + filter_bar
+    }
+
+    /// Convert a screen (cursor_x, cursor_y) into (line_index, char_col).
+    /// Uses calibrated log_area_top if available (set by LineHovered).
+    fn cursor_to_line_col(&self, cursor_x: f32, cursor_y: f32) -> Option<(usize, usize)> {
+        let tab = self.tab()?;
+        let gutter_off = self.gutter_offset();
+        if cursor_x < gutter_off { return None; }
+
+        let line_h = virtual_list::line_height_for_font(self.font_size);
+        let top    = self.log_area_top_cal.unwrap_or_else(|| self.log_area_top());
+        if cursor_y < top { return None; }
+        let row_idx = ((cursor_y - top) / line_h) as usize;
+        if row_idx >= self.viewport_lines { return None; }
+        let view_idx = tab.scroll_offset + row_idx;
+
+        let src = if tab.jump_source_line.is_some() {
+            if view_idx >= tab.total_lines() { return None; }
+            view_idx
+        } else {
+            tab.view_rows.get(view_idx).map(|vr| vr.src())?
+        };
+
+        let char_w     = self.font_size * 0.6;
+        let col_screen = ((cursor_x - gutter_off).max(0.0) / char_w) as usize;
+        let col        = col_screen + tab.h_scroll_offset;
+        Some((src, col))
+    }
+
+    /// Character count for a given source line (after pipeline transforms).
+    fn get_line_char_count(&self, line: usize) -> usize {
+        let Some(tab) = self.tab() else { return 0; };
+        let reader = LineReader::new(tab.file_data_arc.as_ref().as_ref(), &tab.open_file.line_index);
+        let Some(text) = reader.get_line(line) else { return 0; };
+        let display = tab.pipeline.apply_text_transforms(text);
+        display.chars().count()
+    }
+
+    /// Find the start of the previous word from (line, col).
+    fn word_left(&self, line: usize, col: usize) -> (usize, usize) {
+        let Some(tab) = self.tab() else { return (line, col); };
+        let reader = LineReader::new(tab.file_data_arc.as_ref().as_ref(), &tab.open_file.line_index);
+        let Some(text) = reader.get_line(line) else { return (line, col); };
+        let display = tab.pipeline.apply_text_transforms(text);
+        let chars: Vec<char> = display.chars().collect();
+        if col == 0 {
+            // Wrap to end of previous line
+            if let Some(vi) = self.view_row_idx_for_src(line) {
+                if vi > 0 {
+                    if let Some(prev_src) = self.src_for_view_row(vi - 1) {
+                        return (prev_src, self.get_line_char_count(prev_src));
+                    }
+                }
+            }
+            return (line, 0);
+        }
+        let is_word = |c: char| c.is_alphanumeric() || c == '_';
+        let mut p = col.min(chars.len());
+        // Skip whitespace backwards
+        while p > 0 && chars[p - 1].is_whitespace() { p -= 1; }
+        if p == 0 { return (line, 0); }
+        // Skip word chars or non-word chars backwards
+        let target_is_word = is_word(chars[p - 1]);
+        while p > 0 && is_word(chars[p - 1]) == target_is_word { p -= 1; }
+        (line, p)
+    }
+
+    /// Find the start of the next word from (line, col).
+    fn word_right(&self, line: usize, col: usize) -> (usize, usize) {
+        let Some(tab) = self.tab() else { return (line, col); };
+        let reader = LineReader::new(tab.file_data_arc.as_ref().as_ref(), &tab.open_file.line_index);
+        let Some(text) = reader.get_line(line) else { return (line, col); };
+        let display = tab.pipeline.apply_text_transforms(text);
+        let chars: Vec<char> = display.chars().collect();
+        let len = chars.len();
+        if col >= len {
+            // Wrap to start of next line
+            let total_view = tab.total_visible_lines();
+            if let Some(vi) = self.view_row_idx_for_src(line) {
+                if vi + 1 < total_view {
+                    if let Some(next_src) = self.src_for_view_row(vi + 1) {
+                        return (next_src, 0);
+                    }
+                }
+            }
+            return (line, len);
+        }
+        let is_word = |c: char| c.is_alphanumeric() || c == '_';
+        let mut p = col;
+        // Skip current word/non-word chars forward
+        let target_is_word = is_word(chars[p]);
+        while p < len && is_word(chars[p]) == target_is_word { p += 1; }
+        // Skip whitespace forward
+        while p < len && chars[p].is_whitespace() { p += 1; }
+        (line, p)
+    }
+
+    /// Find word boundaries around (line, col). Returns (start_col, end_col).
+    fn word_at(&self, line: usize, col: usize) -> (usize, usize) {
+        let Some(tab) = self.tab() else { return (col, col + 1); };
+        let reader = LineReader::new(tab.file_data_arc.as_ref().as_ref(), &tab.open_file.line_index);
+        let Some(text) = reader.get_line(line) else { return (col, col + 1); };
+        let display = tab.pipeline.apply_text_transforms(text);
+        let chars: Vec<char> = display.chars().collect();
+        if chars.is_empty() { return (0, 0); }
+        if col >= chars.len() { return (chars.len(), chars.len()); }
+        let is_word = |c: char| c.is_alphanumeric() || c == '_';
+        let target_is_word = is_word(chars[col]);
+        let mut start = col;
+        while start > 0 && is_word(chars[start - 1]) == target_is_word { start -= 1; }
+        let mut end = col;
+        while end < chars.len() && is_word(chars[end]) == target_is_word { end += 1; }
+        (start, end)
+    }
+
+    /// Get view_row index for a source line number.
+    fn view_row_idx_for_src(&self, src: usize) -> Option<usize> {
+        let tab = self.tab()?;
+        if tab.jump_source_line.is_some() {
+            if src < tab.total_lines() { Some(src) } else { None }
+        } else {
+            tab.view_rows.iter().position(|vr| vr.src() == src)
+        }
+    }
+
+    /// Get source line for a view_row index.
+    fn src_for_view_row(&self, view_idx: usize) -> Option<usize> {
+        let tab = self.tab()?;
+        if tab.jump_source_line.is_some() {
+            if view_idx < tab.total_lines() { Some(view_idx) } else { None }
+        } else {
+            tab.view_rows.get(view_idx).map(|vr| vr.src())
+        }
+    }
+
+    /// Scroll so that the cursor (focus line) is visible.
+    fn ensure_cursor_visible(&mut self) {
+        let Some(sel) = self.text_sel else { return; };
+        let Some(view_idx) = self.view_row_idx_for_src(sel.focus_line) else { return; };
+        let vp = self.viewport_lines;
+        let Some(tab) = self.tab_mut() else { return; };
+        if view_idx < tab.scroll_offset {
+            tab.scroll_offset = view_idx;
+        } else if view_idx >= tab.scroll_offset + vp {
+            tab.scroll_offset = view_idx.saturating_sub(vp.saturating_sub(1));
+        }
+    }
+
+    /// Move cursor to (line, col). If `extend` is true, keep anchor and move focus only.
+    fn move_cursor_to(&mut self, line: usize, col: usize, extend: bool) {
+        if extend {
+            if let Some(sel) = &mut self.text_sel {
+                sel.focus_line = line;
+                sel.focus_col  = col;
+            } else {
+                self.text_sel = Some(TextSel {
+                    anchor_line: line, anchor_col: col,
+                    focus_line: line, focus_col: col,
+                });
+            }
+            // Clear row-level highlight when extending selection
+            if let Some(t) = self.tab_mut() { t.selected_line = None; }
+        } else {
+            self.text_sel = Some(TextSel {
+                anchor_line: line, anchor_col: col,
+                focus_line: line, focus_col: col,
+            });
+        }
+        self.ensure_cursor_visible();
     }
 
     fn recalc_viewport(&mut self) {
@@ -571,8 +770,8 @@ impl App {
             PaletteCmd { label: "Reset Zoom".into(),         shortcut: "Ctrl+0", action: Message::ZoomReset },
             PaletteCmd { label: wrap_lbl.into(),             shortcut: "",       action: Message::WrapToggle },
             PaletteCmd { label: tail_lbl.into(),             shortcut: "",       action: Message::TailToggle },
-            PaletteCmd { label: "Go to Top".into(),          shortcut: "Home",   action: Message::ScrollTo(0) },
-            PaletteCmd { label: "Go to Bottom".into(),       shortcut: "End",    action: Message::GoToBottom },
+            PaletteCmd { label: "Go to Top".into(),          shortcut: "Ctrl+Home", action: Message::ScrollTo(0) },
+            PaletteCmd { label: "Go to Bottom".into(),       shortcut: "Ctrl+End",  action: Message::GoToBottom },
             PaletteCmd { label: "Next Bookmark".into(),      shortcut: "F2",     action: Message::NextBookmark },
             PaletteCmd { label: "Prev Bookmark".into(),      shortcut: "⇧F2",    action: Message::PrevBookmark },
             PaletteCmd { label: "Toggle Pipeline".into(),    shortcut: "",       action: Message::TogglePipeline },
@@ -635,6 +834,7 @@ impl App {
             }
 
             Message::FileDrop(path) => {
+                self.recent_files_open = false;
                 return Task::perform(load_file(path), Message::FileLoaded);
             }
 
@@ -666,7 +866,15 @@ impl App {
                 let Some(tab) = self.tabs.get_mut(ai) else { return Task::none(); };
                 let Ok(file_map) = FileMap::open(&path) else { return Task::none(); };
                 let data_arc: Arc<dyn AsRef<[u8]> + Send + Sync> = match gz_data {
-                    None    => file_map.clone_mmap_arc(),
+                    None    => {
+                        let mmap_arc = file_map.clone_mmap_arc();
+                        let bytes: &[u8] = mmap_arc.as_ref().as_ref();
+                        if std::str::from_utf8(bytes).is_ok() {
+                            mmap_arc
+                        } else {
+                            Arc::new(ensure_utf8(bytes.to_vec()))
+                        }
+                    }
                     Some(v) => Arc::new(ensure_utf8(v)),
                 };
                 let line_index = LineIndex::build(data_arc.as_ref().as_ref());
@@ -867,33 +1075,183 @@ impl App {
             }
 
             // ── Keyboard ─────────────────────────────────────────────────────
-            Message::KeyPressed(key, modifiers) => match key {
-                Key::Named(keyboard::key::Named::PageDown) => {
-                    let d = self.viewport_lines.saturating_sub(2) as i64;
-                    return self.update(Message::ScrollBy(d));
+            Message::KeyPressed(key, modifiers) => {
+                let shift    = modifiers.shift();
+                let ctrl     = modifiers.control();
+                let has_file = !self.tabs.is_empty();
+                let has_cursor = self.text_sel.is_some() && has_file;
+
+                match key {
+                Key::Named(keyboard::key::Named::ArrowLeft) => {
+                    if has_cursor {
+                        let sel = self.text_sel.unwrap();
+                        if ctrl {
+                            // Ctrl+Left / Ctrl+Shift+Left: word-level movement
+                            let (nl, nc) = self.word_left(sel.focus_line, sel.focus_col);
+                            self.move_cursor_to(nl, nc, shift);
+                        } else if !shift && !sel.is_empty() {
+                            // Collapse selection to its start
+                            let ((lo_l, lo_c), _) = sel.normalised();
+                            self.move_cursor_to(lo_l, lo_c, false);
+                        } else {
+                            let (nl, nc) = if sel.focus_col > 0 {
+                                (sel.focus_line, sel.focus_col - 1)
+                            } else {
+                                let prev_src = self.view_row_idx_for_src(sel.focus_line)
+                                    .and_then(|vi| if vi > 0 { self.src_for_view_row(vi - 1) } else { None })
+                                    .unwrap_or(sel.focus_line);
+                                if prev_src != sel.focus_line {
+                                    (prev_src, self.get_line_char_count(prev_src))
+                                } else {
+                                    (sel.focus_line, 0)
+                                }
+                            };
+                            self.move_cursor_to(nl, nc, shift);
+                        }
+                    }
                 }
-                Key::Named(keyboard::key::Named::PageUp) => {
-                    let d = -(self.viewport_lines.saturating_sub(2) as i64);
-                    return self.update(Message::ScrollBy(d));
+                Key::Named(keyboard::key::Named::ArrowRight) => {
+                    if has_cursor {
+                        let sel = self.text_sel.unwrap();
+                        if ctrl {
+                            // Ctrl+Right / Ctrl+Shift+Right: word-level movement
+                            let (nl, nc) = self.word_right(sel.focus_line, sel.focus_col);
+                            self.move_cursor_to(nl, nc, shift);
+                        } else if !shift && !sel.is_empty() {
+                            // Collapse selection to its end
+                            let (_, (hi_l, hi_c)) = sel.normalised();
+                            self.move_cursor_to(hi_l, hi_c, false);
+                        } else {
+                            let line_len = self.get_line_char_count(sel.focus_line);
+                            let (nl, nc) = if sel.focus_col < line_len {
+                                (sel.focus_line, sel.focus_col + 1)
+                            } else {
+                                let total_view = self.tab().map(|t| t.total_visible_lines()).unwrap_or(0);
+                                let next_src = self.view_row_idx_for_src(sel.focus_line)
+                                    .and_then(|vi| if vi + 1 < total_view { self.src_for_view_row(vi + 1) } else { None });
+                                match next_src {
+                                    Some(ns) => (ns, 0),
+                                    None     => (sel.focus_line, sel.focus_col),
+                                }
+                            };
+                            self.move_cursor_to(nl, nc, shift);
+                        }
+                    }
                 }
-                Key::Named(keyboard::key::Named::Home) => return self.update(Message::ScrollTo(0)),
-                Key::Named(keyboard::key::Named::End)  => return self.update(Message::GoToBottom),
                 Key::Named(keyboard::key::Named::ArrowDown) => {
-                    if modifiers.control() { return self.update(Message::HistoryNext); }
+                    if ctrl { return self.update(Message::HistoryNext); }
                     if self.palette_open { return self.update(Message::PaletteMove(1)); }
-                    return self.update(Message::ScrollBy(1));
+                    if has_cursor {
+                        let sel = self.text_sel.unwrap();
+                        let total_view = self.tab().map(|t| t.total_visible_lines()).unwrap_or(0);
+                        if let Some(vi) = self.view_row_idx_for_src(sel.focus_line) {
+                            let new_vi = (vi + 1).min(total_view.saturating_sub(1));
+                            if let Some(new_src) = self.src_for_view_row(new_vi) {
+                                self.move_cursor_to(new_src, sel.focus_col, shift);
+                            }
+                        }
+                    } else {
+                        return self.update(Message::ScrollBy(1));
+                    }
                 }
                 Key::Named(keyboard::key::Named::ArrowUp) => {
-                    if modifiers.control() { return self.update(Message::HistoryPrev); }
+                    if ctrl { return self.update(Message::HistoryPrev); }
                     if self.palette_open { return self.update(Message::PaletteMove(-1)); }
-                    return self.update(Message::ScrollBy(-1));
+                    if has_cursor {
+                        let sel = self.text_sel.unwrap();
+                        if let Some(vi) = self.view_row_idx_for_src(sel.focus_line) {
+                            let new_vi = vi.saturating_sub(1);
+                            if let Some(new_src) = self.src_for_view_row(new_vi) {
+                                self.move_cursor_to(new_src, sel.focus_col, shift);
+                            }
+                        }
+                    } else {
+                        return self.update(Message::ScrollBy(-1));
+                    }
+                }
+                Key::Named(keyboard::key::Named::Home) => {
+                    if ctrl {
+                        // Ctrl+Home / Ctrl+Shift+Home: move to file start
+                        if has_file {
+                            if let Some(first_src) = self.src_for_view_row(0) {
+                                self.move_cursor_to(first_src, 0, shift);
+                            } else {
+                                return self.update(Message::ScrollTo(0));
+                            }
+                        } else {
+                            return self.update(Message::ScrollTo(0));
+                        }
+                    } else if has_cursor {
+                        // Home / Shift+Home: move to start of line
+                        let src = self.text_sel.unwrap().focus_line;
+                        self.move_cursor_to(src, 0, shift);
+                    } else {
+                        return self.update(Message::ScrollTo(0));
+                    }
+                }
+                Key::Named(keyboard::key::Named::End) => {
+                    if ctrl {
+                        // Ctrl+End / Ctrl+Shift+End: move to file end
+                        if has_file {
+                            let total_view = self.tab().map(|t| t.total_visible_lines()).unwrap_or(0);
+                            if let Some(last_src) = self.src_for_view_row(total_view.saturating_sub(1)) {
+                                let line_len = self.get_line_char_count(last_src);
+                                self.move_cursor_to(last_src, line_len, shift);
+                            } else {
+                                return self.update(Message::GoToBottom);
+                            }
+                        } else {
+                            return self.update(Message::GoToBottom);
+                        }
+                    } else if has_cursor {
+                        // End / Shift+End: move to end of line
+                        let src = self.text_sel.unwrap().focus_line;
+                        let line_len = self.get_line_char_count(src);
+                        self.move_cursor_to(src, line_len, shift);
+                    } else {
+                        return self.update(Message::GoToBottom);
+                    }
+                }
+                Key::Named(keyboard::key::Named::PageDown) => {
+                    if has_cursor {
+                        let sel = self.text_sel.unwrap();
+                        let jump = self.viewport_lines.saturating_sub(2);
+                        let total_view = self.tab().map(|t| t.total_visible_lines()).unwrap_or(0);
+                        if let Some(vi) = self.view_row_idx_for_src(sel.focus_line) {
+                            let new_vi = (vi + jump).min(total_view.saturating_sub(1));
+                            if let Some(new_src) = self.src_for_view_row(new_vi) {
+                                self.move_cursor_to(new_src, sel.focus_col, shift);
+                            }
+                        }
+                    } else {
+                        let d = self.viewport_lines.saturating_sub(2) as i64;
+                        return self.update(Message::ScrollBy(d));
+                    }
+                }
+                Key::Named(keyboard::key::Named::PageUp) => {
+                    if has_cursor {
+                        let sel = self.text_sel.unwrap();
+                        let jump = self.viewport_lines.saturating_sub(2);
+                        if let Some(vi) = self.view_row_idx_for_src(sel.focus_line) {
+                            let new_vi = vi.saturating_sub(jump);
+                            if let Some(new_src) = self.src_for_view_row(new_vi) {
+                                self.move_cursor_to(new_src, sel.focus_col, shift);
+                            }
+                        }
+                    } else {
+                        let d = -(self.viewport_lines.saturating_sub(2) as i64);
+                        return self.update(Message::ScrollBy(d));
+                    }
+                }
+                Key::Named(keyboard::key::Named::Insert) => {
+                    self.block_cursor = !self.block_cursor;
                 }
                 Key::Named(keyboard::key::Named::F2) => {
-                    if modifiers.shift() { return self.update(Message::PrevBookmark); }
+                    if shift { return self.update(Message::PrevBookmark); }
                     return self.update(Message::NextBookmark);
                 }
                 Key::Named(keyboard::key::Named::F5) => {
-                    if !self.tabs.is_empty() { return self.update(Message::ReloadActiveFile); }
+                    if has_file { return self.update(Message::ReloadActiveFile); }
                 }
                 Key::Named(keyboard::key::Named::Escape) => {
                     if self.palette_open {
@@ -904,6 +1262,7 @@ impl App {
                         self.settings_open = false;
                     } else if self.text_sel.is_some() {
                         self.text_sel = None;
+                        self.mouse_selecting = false;
                     } else if let Some(t) = self.tab_mut() {
                         if t.jump_source_line.is_some() {
                             t.jump_source_line = None;
@@ -913,10 +1272,26 @@ impl App {
                         }
                     }
                 }
-                Key::Character(c) if modifiers.control() => match c.as_str() {
+                Key::Character(c) if ctrl => match c.as_str() {
                     "=" | "+" => return self.update(Message::ZoomIn),
                     "-"       => return self.update(Message::ZoomOut),
                     "0"       => return self.update(Message::ZoomReset),
+                    "a"       => {
+                        // Ctrl+A: select all visible lines
+                        if has_file {
+                            let total_view = self.tab().map(|t| t.total_visible_lines()).unwrap_or(0);
+                            if total_view > 0 {
+                                let first_src = self.src_for_view_row(0).unwrap_or(0);
+                                let last_src  = self.src_for_view_row(total_view - 1).unwrap_or(0);
+                                let last_len  = self.get_line_char_count(last_src);
+                                self.text_sel = Some(TextSel {
+                                    anchor_line: first_src, anchor_col: 0,
+                                    focus_line: last_src, focus_col: last_len,
+                                });
+                                if let Some(t) = self.tab_mut() { t.selected_line = None; }
+                            }
+                        }
+                    }
                     "b"       => {
                         if let Some(n) = self.tab().and_then(|t| t.selected_line) {
                             return self.update(Message::ToggleBookmark(n));
@@ -963,7 +1338,7 @@ impl App {
                     _         => {}
                 },
                 _ => {}
-            },
+            }},
 
             // ── Scrollbar ────────────────────────────────────────────────────
             Message::ScrollbarClicked => { self.scrollbar_dragging = true; self.scroll_to_cursor_y(); }
@@ -975,33 +1350,171 @@ impl App {
                 self.cursor_x = x;
                 self.scrollbar_hover_y = y;
                 if self.scrollbar_dragging { self.scroll_to_cursor_y(); }
-                if self.mouse_selecting   { return self.update(Message::TextSelUpdate(x)); }
+                if self.mouse_selecting {
+                    let gutter_off = self.gutter_offset();
+                    let top = self.log_area_top_cal.unwrap_or_else(|| self.log_area_top());
+                    let line_h = virtual_list::line_height_for_font(self.font_size);
+                    let bottom = top + (self.viewport_lines as f32) * line_h;
+
+                    if let Some((src, col)) = self.cursor_to_line_col(x, y) {
+                        // Normal drag within viewport
+                        if let Some(sel) = &mut self.text_sel {
+                            if src != sel.anchor_line || col != sel.anchor_col {
+                                if let Some(t) = self.tabs.get_mut(self.active_tab) {
+                                    t.selected_line = None;
+                                }
+                            }
+                            sel.focus_line = src;
+                            sel.focus_col  = col;
+                        }
+                    } else if x >= gutter_off && (y < top || y > bottom) {
+                        // Drag auto-scroll: cursor is above or below viewport
+                        // (NOT triggered when cursor is in gutter — that's just lateral movement)
+                        let char_w = self.font_size * 0.6;
+                        let col_screen = ((x - gutter_off).max(0.0) / char_w) as usize;
+                        let col = col_screen + self.tab().map(|t| t.h_scroll_offset).unwrap_or(0);
+                        if y < top {
+                            if let Some(tab) = self.tab_mut() {
+                                if tab.scroll_offset > 0 { tab.scroll_offset -= 1; }
+                            }
+                            if let Some(new_src) = self.src_for_view_row(
+                                self.tab().map(|t| t.scroll_offset).unwrap_or(0)
+                            ) {
+                                if let Some(sel) = &mut self.text_sel {
+                                    sel.focus_line = new_src;
+                                    sel.focus_col  = col;
+                                    if let Some(t) = self.tabs.get_mut(self.active_tab) {
+                                        t.selected_line = None;
+                                    }
+                                }
+                            }
+                        } else {
+                            let vp = self.viewport_lines;
+                            if let Some(tab) = self.tab_mut() {
+                                let max_off = tab.total_visible_lines().saturating_sub(vp);
+                                if tab.scroll_offset < max_off { tab.scroll_offset += 1; }
+                            }
+                            let last_vi = self.tab().map(|t| {
+                                (t.scroll_offset + vp).min(t.total_visible_lines()).saturating_sub(1)
+                            }).unwrap_or(0);
+                            if let Some(new_src) = self.src_for_view_row(last_vi) {
+                                if let Some(sel) = &mut self.text_sel {
+                                    sel.focus_line = new_src;
+                                    sel.focus_col  = col;
+                                    if let Some(t) = self.tabs.get_mut(self.active_tab) {
+                                        t.selected_line = None;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    // else: cursor is in gutter area — do nothing (don't extend selection)
+                }
             }
 
             // ── Text selection ────────────────────────────────────────────────
-            // TextSelUpdate: only update focus column from cursor_x.
-            // focus_line is updated by LineHovered (row mouse_area on_move).
-            Message::TextSelUpdate(cursor_x) => {
-                if self.mouse_selecting {
+            // Global left-button press: rich_text captures on_press so we
+            // handle click-to-place-cursor via the subscription instead.
+            // Uses hovered_line (set by mouse_area on_enter/on_move) for the
+            // exact line — no pixel offset guessing required.
+            Message::LeftMouseDown => {
+                // Close context menu on any left click
+                self.context_menu_line = None;
+                if let Some(src) = self.hovered_line {
                     let gutter_off = self.gutter_offset();
                     let char_w     = self.font_size * 0.6;
-                    let col        = ((cursor_x - gutter_off).max(0.0) / char_w) as usize;
-                    if let Some(sel) = &mut self.text_sel {
-                        sel.focus_col = col;
+                    let col_screen = ((self.cursor_x - gutter_off).max(0.0) / char_w) as usize;
+                    let col        = col_screen + self.tab().map(|t| t.h_scroll_offset).unwrap_or(0);
+
+                    // Detect double/triple clicks (within 500ms)
+                    let now = Instant::now();
+                    let is_repeat = self.last_click_time
+                        .map_or(false, |t| now.duration_since(t).as_millis() < 500);
+                    if is_repeat {
+                        self.click_count += 1;
+                    } else {
+                        self.click_count = 1;
+                    }
+                    self.last_click_time = Some(now);
+
+                    if self.click_count >= 3 {
+                        // Triple-click: select entire line
+                        let line_len = self.get_line_char_count(src);
+                        self.text_sel = Some(TextSel {
+                            anchor_line: src, anchor_col: 0,
+                            focus_line: src, focus_col: line_len,
+                        });
+                        self.mouse_selecting = true;
+                        if let Some(t) = self.tab_mut() { t.selected_line = None; }
+                    } else if self.click_count == 2 {
+                        // Double-click: select word
+                        let (word_start, word_end) = self.word_at(src, col);
+                        self.text_sel = Some(TextSel {
+                            anchor_line: src, anchor_col: word_start,
+                            focus_line: src, focus_col: word_end,
+                        });
+                        self.mouse_selecting = true;
+                        if let Some(t) = self.tab_mut() { t.selected_line = None; }
+                    } else if self.modifiers.shift() {
+                        // Shift+click: extend selection from anchor to click point
+                        if let Some(sel) = &mut self.text_sel {
+                            sel.focus_line = src;
+                            sel.focus_col  = col;
+                        } else {
+                            self.text_sel = Some(TextSel {
+                                anchor_line: src, anchor_col: col,
+                                focus_line: src, focus_col: col,
+                            });
+                        }
+                        self.mouse_selecting = true;
+                        if let Some(t) = self.tab_mut() { t.selected_line = None; }
+                    } else {
+                        // Single click: place cursor
+                        self.text_sel = Some(TextSel {
+                            anchor_line: src, anchor_col: col,
+                            focus_line:  src, focus_col:  col,
+                        });
+                        self.mouse_selecting = true;
+                        if let Some(t) = self.tab_mut() { t.selected_line = Some(src); }
                     }
                 }
+            }
+            Message::TextSelUpdate(_cursor_x) => {
+                // Now handled entirely in CursorMoved above; kept for API compat
             }
             Message::TextSelClear => {
                 self.text_sel        = None;
                 self.mouse_selecting = false;
             }
-            // LineHovered: fired by each row's on_move; updates focus row during drag.
+            // LineHovered: track which line the cursor is over (for LeftMouseDown to use).
+            // Also calibrates the log_area_top offset for cursor_to_line_col.
             Message::LineHovered(src) => {
+                self.hovered_line = Some(src);
+                // Calibrate: compute actual log area top from known line + cursor_y
+                if let Some(tab) = self.tab() {
+                    let line_h = virtual_list::line_height_for_font(self.font_size);
+                    // Find view_row index for this source line
+                    let view_idx = if tab.jump_source_line.is_some() {
+                        src
+                    } else {
+                        tab.view_rows.iter().position(|vr| vr.src() == src)
+                            .unwrap_or(src)
+                    };
+                    let row_in_viewport = view_idx.saturating_sub(tab.scroll_offset);
+                    let cal_top = self.scrollbar_hover_y - (row_in_viewport as f32 + 0.5) * line_h;
+                    self.log_area_top_cal = Some(cal_top);
+                }
                 if self.mouse_selecting {
                     let gutter_off = self.gutter_offset();
                     let char_w     = self.font_size * 0.6;
-                    let col        = ((self.cursor_x - gutter_off).max(0.0) / char_w) as usize;
+                    let col_screen = ((self.cursor_x - gutter_off).max(0.0) / char_w) as usize;
+                    let col        = col_screen + self.tab().map(|t| t.h_scroll_offset).unwrap_or(0);
                     if let Some(sel) = &mut self.text_sel {
+                        if src != sel.anchor_line || col != sel.anchor_col {
+                            if let Some(t) = self.tabs.get_mut(self.active_tab) {
+                                t.selected_line = None;
+                            }
+                        }
                         sel.focus_line = src;
                         sel.focus_col  = col;
                     }
@@ -1067,6 +1580,7 @@ impl App {
 
             // ── Theme / settings ─────────────────────────────────────────────
             Message::SetTheme(t)     => { self.app_theme = t; }
+            Message::SetOpacity(v)   => { self.bg_opacity = v.clamp(0.0, 1.0); }
             Message::ToggleSettings  => { self.settings_open = !self.settings_open; }
             Message::ToggleInfoPanel => { self.info_panel_open = !self.info_panel_open; }
             Message::WrapToggle => {
@@ -1082,24 +1596,20 @@ impl App {
                     }
                 }
             }
+            Message::HScrollTo(pos) => {
+                if !self.line_wrap {
+                    if let Some(t) = self.tab_mut() {
+                        t.h_scroll_offset = pos.round().max(0.0) as usize;
+                    }
+                }
+            }
             Message::ToggleColorLogLevels => { self.color_log_levels = !self.color_log_levels; }
 
             // ── Line selection ────────────────────────────────────────────────
-            Message::LineClicked(n) => {
-                // Start a character-level selection at the click position
-                let col = {
-                    let gutter_off = self.gutter_offset();
-                    let char_w     = self.font_size * 0.6;
-                    ((self.cursor_x - gutter_off).max(0.0) / char_w) as usize
-                };
-                self.text_sel = Some(TextSel {
-                    anchor_line: n, anchor_col: col,
-                    focus_line:  n, focus_col:  col,
-                });
-                self.mouse_selecting = true;
-                if let Some(t) = self.tab_mut() {
-                    t.selected_line = if t.selected_line == Some(n) { None } else { Some(n) };
-                }
+            Message::LineClicked(_n) => {
+                // Fires on mouse_area on_release. Do NOT reset text_sel here —
+                // LeftMouseDown already placed the cursor/anchor on press, and
+                // overwriting it on release would destroy any drag selection.
             }
             Message::CopyToClipboard => {
                 if let Some(tab) = self.tab() {
@@ -1518,7 +2028,11 @@ impl App {
 
             // ── Right-click context menu ──────────────────────────────────────
             Message::RightClickLine(n) => {
-                if let Some(t) = self.tab_mut() { t.selected_line = Some(n); }
+                // Only set selected_line if there's no active text selection
+                let has_text_sel = self.text_sel.map_or(false, |s| !s.is_empty());
+                if !has_text_sel {
+                    if let Some(t) = self.tab_mut() { t.selected_line = Some(n); }
+                }
                 self.context_menu_line = if self.context_menu_line == Some(n) { None } else { Some(n) };
                 // Freeze cursor position now so the menu doesn't follow the mouse.
                 if self.context_menu_line.is_some() {
@@ -1539,6 +2053,35 @@ impl App {
                         // Apply pipeline transforms so what's copied matches what's displayed
                         let display = tab.pipeline.apply_text_transforms(raw);
                         return iced::clipboard::write(display.into_owned());
+                    }
+                }
+            }
+
+            Message::CopySelection => {
+                self.context_menu_line = None;
+                if let Some(sel) = self.text_sel {
+                    if !sel.is_empty() {
+                        let ((lo_line, lo_col), (hi_line, hi_col)) = sel.normalised();
+                        if let Some(tab) = self.tab() {
+                            let reader = LineReader::new(
+                                tab.file_data_arc.as_ref().as_ref(),
+                                &tab.open_file.line_index,
+                            );
+                            let mut parts: Vec<String> = Vec::new();
+                            for line_n in lo_line..=hi_line {
+                                if let Some(raw) = reader.get_line(line_n) {
+                                    let display = tab.pipeline.apply_text_transforms(raw);
+                                    let chars: Vec<char> = display.chars().collect();
+                                    let start = if line_n == lo_line { lo_col.min(chars.len()) } else { 0 };
+                                    let end   = if line_n == hi_line { hi_col.min(chars.len()) } else { chars.len() };
+                                    parts.push(chars[start..end].iter().collect());
+                                }
+                            }
+                            let text = parts.join("\n");
+                            if !text.is_empty() {
+                                return iced::clipboard::write(text);
+                            }
+                        }
                     }
                 }
             }
@@ -1641,6 +2184,7 @@ impl App {
             self.color_log_levels,
             h_scroll_offset,
             self.text_sel,
+            self.block_cursor,
             p,
         );
 
@@ -1715,20 +2259,39 @@ impl App {
             let overlay = views::jump_to_line::view(&self.jump_input, total, p);
             stack![main_layout, overlay].into()
         } else if self.settings_open {
-            let overlay = views::settings_panel::view(self.app_theme, self.font_size, self.line_wrap, self.color_log_levels, p);
+            let overlay = views::settings_panel::view(self.app_theme, self.font_size, self.line_wrap, self.color_log_levels, self.bg_opacity, p);
             stack![main_layout, overlay].into()
         } else if self.recent_files_open {
             let overlay = views::recent_panel::view(&self.recent_files, p);
             stack![main_layout, overlay].into()
         } else if let Some(ctx_line) = self.context_menu_line {
-            let overlay = views::context_menu::view(ctx_line, self.context_menu_x, self.context_menu_y, p);
+            let has_sel = self.text_sel.map_or(false, |s| !s.is_empty());
+            let overlay = views::context_menu::view(ctx_line, self.context_menu_x, self.context_menu_y, has_sel, p);
             stack![main_layout, overlay].into()
         } else {
             main_layout.into()
         }
     }
 
-    pub fn theme(&self) -> Theme { self.app_theme.iced_theme() }
+    pub fn theme(&self) -> Theme {
+        let base = self.app_theme.iced_theme();
+        if self.bg_opacity >= 1.0 {
+            return base;
+        }
+        // Create a custom iced theme with transparent background (Windows Terminal style).
+        // The iced Palette.background controls the window clear color — making it
+        // transparent lets the desktop show through when the window compositor supports it.
+        let mut iced_pal = base.palette();
+        iced_pal.background = iced::Color {
+            a: iced_pal.background.a * self.bg_opacity,
+            ..iced_pal.background
+        };
+        iced::Theme::custom_with_fn(
+            format!("{} ({}%)", self.app_theme.name(), (self.bg_opacity * 100.0).round()),
+            iced_pal,
+            |pal| iced::theme::palette::Extended::generate(pal),
+        )
+    }
 
     // ── Subscriptions ─────────────────────────────────────────────────────────
 
@@ -1753,6 +2316,7 @@ impl App {
 
         subs.push(event::listen_with(|evt, _status, _id| match evt {
             iced::Event::Mouse(mouse::Event::CursorMoved { position }) => Some(Message::CursorMoved(position.x, position.y)),
+            iced::Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => Some(Message::LeftMouseDown),
             iced::Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => Some(Message::ScrollbarReleased),
             _ => None,
         }));
@@ -1817,7 +2381,17 @@ fn ensure_utf8(raw: Vec<u8>) -> Vec<u8> {
 fn build_tab(path: PathBuf, gz_data: Option<Vec<u8>>) -> Option<Tab> {
     let file_map = FileMap::open(&path).ok()?;
     let data_arc: Arc<dyn AsRef<[u8]> + Send + Sync> = match gz_data {
-        None    => file_map.clone_mmap_arc(),
+        None    => {
+            // Check if the mmap data is valid UTF-8; if not, convert lossy
+            // (handles BOM, Windows-1252, and other non-UTF-8 encodings)
+            let mmap_arc = file_map.clone_mmap_arc();
+            let bytes: &[u8] = mmap_arc.as_ref().as_ref();
+            if std::str::from_utf8(bytes).is_ok() {
+                mmap_arc
+            } else {
+                Arc::new(ensure_utf8(bytes.to_vec()))
+            }
+        }
         Some(v) => Arc::new(ensure_utf8(v)),
     };
     let line_index  = LineIndex::build(data_arc.as_ref().as_ref());
@@ -1898,4 +2472,156 @@ pub fn format_file_size(bytes: u64) -> String {
     else if bytes < 1024 * 1024 { format!("{:.1} KB", bytes as f64 / 1024.0) }
     else if bytes < 1024 * 1024 * 1024 { format!("{:.1} MB", bytes as f64 / (1024.0 * 1024.0)) }
     else { format!("{:.2} GB", bytes as f64 / (1024.0 * 1024.0 * 1024.0)) }
+}
+
+// ── Tests ────────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Simulate the cursor_to_line_col math without needing a full App.
+    /// This validates the mapping from screen coordinates to (line, col).
+    fn sim_cursor_to_line_col(
+        cursor_x: f32,
+        cursor_y: f32,
+        font_size: f32,
+        gutter_off: f32,
+        log_area_top: f32,
+        viewport_lines: usize,
+        scroll_offset: usize,
+        total_lines: usize,
+        h_scroll_offset: usize,
+    ) -> Option<(usize, usize)> {
+        if cursor_x < gutter_off { return None; }
+        let line_h = virtual_list::line_height_for_font(font_size);
+        if cursor_y < log_area_top { return None; }
+        let row_idx = ((cursor_y - log_area_top) / line_h) as usize;
+        if row_idx >= viewport_lines { return None; }
+        let view_idx = scroll_offset + row_idx;
+        if view_idx >= total_lines { return None; }
+        let src = view_idx; // simplified: no view_rows mapping
+
+        let char_w = font_size * 0.6;
+        let col_screen = ((cursor_x - gutter_off).max(0.0) / char_w) as usize;
+        let col = col_screen + h_scroll_offset;
+        Some((src, col))
+    }
+
+    #[test]
+    fn test_click_maps_to_correct_line_and_col() {
+        let font_size = 16.0;
+        let gutter_off = 106.0; // 56 activity + 6 gutter + 44 line num
+        let log_area_top = 39.0; // 1px separator + 38px filter bar
+        let viewport_lines = 50;
+        let total_lines = 100;
+        let line_h = virtual_list::line_height_for_font(font_size); // ~22.16
+
+        // Click on the first visible line, character column 5
+        let char_w = font_size * 0.6; // 9.6
+        let x = gutter_off + 5.0 * char_w + 1.0; // middle of char 5
+        let y = log_area_top + 2.0; // top of first row
+        let result = sim_cursor_to_line_col(x, y, font_size, gutter_off, log_area_top, viewport_lines, 0, total_lines, 0);
+        assert_eq!(result, Some((0, 5)));
+
+        // Click on line 3 (0-indexed), with scroll offset 10
+        let y = log_area_top + 3.0 * line_h + 2.0;
+        let result = sim_cursor_to_line_col(x, y, font_size, gutter_off, log_area_top, viewport_lines, 10, total_lines, 0);
+        assert_eq!(result, Some((13, 5))); // scroll_offset=10 + row=3
+
+        // Click on col 2 with h_scroll_offset = 10
+        let x = gutter_off + 2.0 * char_w + 1.0;
+        let y = log_area_top + 2.0;
+        let result = sim_cursor_to_line_col(x, y, font_size, gutter_off, log_area_top, viewport_lines, 0, total_lines, 10);
+        assert_eq!(result, Some((0, 12))); // col_screen=2 + h_scroll=10
+    }
+
+    #[test]
+    fn test_click_outside_log_area_returns_none() {
+        let font_size = 16.0;
+        let gutter_off = 106.0;
+        let log_area_top = 39.0;
+
+        // Click above log area (in toolbar)
+        let result = sim_cursor_to_line_col(200.0, 10.0, font_size, gutter_off, log_area_top, 50, 0, 100, 0);
+        assert!(result.is_none(), "click above log area should be None");
+
+        // Click in gutter area (left of text)
+        let result = sim_cursor_to_line_col(50.0, 60.0, font_size, gutter_off, log_area_top, 50, 0, 100, 0);
+        assert!(result.is_none(), "click in gutter should be None");
+
+        // Click below viewport
+        let line_h = virtual_list::line_height_for_font(font_size);
+        let y = log_area_top + 50.0 * line_h + 5.0; // past viewport_lines=50
+        let result = sim_cursor_to_line_col(200.0, y, font_size, gutter_off, log_area_top, 50, 0, 100, 0);
+        assert!(result.is_none(), "click below viewport should be None");
+    }
+
+    #[test]
+    fn test_text_sel_state_transitions() {
+        // Simulate: click sets anchor=focus, drag moves focus, release stops
+        let mut sel = TextSel {
+            anchor_line: 5, anchor_col: 10,
+            focus_line: 5, focus_col: 10,
+        };
+        assert!(sel.is_empty(), "initial click should be empty selection");
+
+        // Simulate drag: focus moves
+        sel.focus_line = 5;
+        sel.focus_col = 20;
+        assert!(!sel.is_empty(), "after drag, selection should not be empty");
+        let ((lo_line, lo_col), (hi_line, hi_col)) = sel.normalised();
+        assert_eq!((lo_line, lo_col), (5, 10));
+        assert_eq!((hi_line, hi_col), (5, 20));
+
+        // Simulate multi-line drag
+        sel.focus_line = 8;
+        sel.focus_col = 3;
+        let ((lo_line, lo_col), (hi_line, hi_col)) = sel.normalised();
+        assert_eq!((lo_line, lo_col), (5, 10));
+        assert_eq!((hi_line, hi_col), (8, 3));
+
+        // Backward selection (drag up)
+        sel.anchor_line = 10;
+        sel.anchor_col = 5;
+        sel.focus_line = 7;
+        sel.focus_col = 15;
+        let ((lo_line, lo_col), (hi_line, hi_col)) = sel.normalised();
+        assert_eq!((lo_line, lo_col), (7, 15));
+        assert_eq!((hi_line, hi_col), (10, 5));
+    }
+
+    #[test]
+    fn test_selected_line_cleared_on_drag() {
+        // Simulate: click sets selected_line, drag clears it
+        let mut selected_line: Option<usize> = None;
+        let mut sel = TextSel {
+            anchor_line: 5, anchor_col: 10,
+            focus_line: 5, focus_col: 10,
+        };
+
+        // On click: set selected_line
+        selected_line = Some(5);
+        assert_eq!(selected_line, Some(5));
+
+        // On first CursorMoved while mouse_selecting:
+        // position same as anchor → keep selected_line
+        let new_line = 5;
+        let new_col = 10;
+        if new_line != sel.anchor_line || new_col != sel.anchor_col {
+            selected_line = None;
+        }
+        assert_eq!(selected_line, Some(5), "no drag yet, keep selected_line");
+
+        // Position diverges → clear selected_line
+        let new_line = 5;
+        let new_col = 15;
+        if new_line != sel.anchor_line || new_col != sel.anchor_col {
+            selected_line = None;
+        }
+        sel.focus_line = new_line;
+        sel.focus_col = new_col;
+        assert_eq!(selected_line, None, "drag started, selected_line should be cleared");
+        assert!(!sel.is_empty(), "selection should now be non-empty");
+    }
 }

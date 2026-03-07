@@ -1,4 +1,4 @@
-use iced::widget::{button, column, container, mouse_area, text};
+use iced::widget::{button, container, mouse_area, text, Column};
 use iced::{Color, Element, Length};
 
 use crate::app::Message;
@@ -6,10 +6,11 @@ use crate::theme::Palette;
 
 /// Small floating context menu that appears on right-click of a log line.
 pub fn view<'a>(
-    line_num:  usize,
-    cursor_x:  f32,
-    cursor_y:  f32,
-    p:         Palette,
+    line_num:      usize,
+    cursor_x:      f32,
+    cursor_y:      f32,
+    has_selection: bool,
+    p:             Palette,
 ) -> Element<'a, Message> {
     let bg  = p.bg_surface;
     let bdr = p.border;
@@ -17,10 +18,31 @@ pub fn view<'a>(
     let fgm = p.fg_muted;
     let bgh = p.bg_hover;
 
+    let mut items: Vec<Element<'a, Message>> = Vec::new();
+
+    // "Copy Selection" — shown only when there's a non-empty text selection
+    if has_selection {
+        let copy_sel_btn = button(
+            text("Copy Selection").size(13).color(fg),
+        )
+        .on_press(Message::CopySelection)
+        .padding([8, 16])
+        .width(Length::Fill)
+        .style(move |_: &iced::Theme, status| button::Style {
+            background: Some(match status {
+                button::Status::Hovered | button::Status::Pressed => bgh.into(),
+                _ => Color::TRANSPARENT.into(),
+            }),
+            text_color: fg,
+            border: iced::Border::default(),
+            shadow: iced::Shadow::default(),
+        });
+        items.push(copy_sel_btn.into());
+    }
+
+    // "Copy Line N" — always shown
     let copy_btn = button(
-        column![
-            text(format!("Copy  (line {})", line_num + 1)).size(13).color(fg),
-        ]
+        text(format!("Copy Line {}", line_num + 1)).size(13).color(fg),
     )
     .on_press(Message::CopyLine(line_num))
     .padding([8, 16])
@@ -34,6 +56,7 @@ pub fn view<'a>(
         border: iced::Border::default(),
         shadow: iced::Shadow::default(),
     });
+    items.push(copy_btn.into());
 
     let dismiss_btn = button(text("Dismiss").size(12).color(fgm))
         .on_press(Message::CloseContextMenu)
@@ -48,9 +71,10 @@ pub fn view<'a>(
             border: iced::Border::default(),
             shadow: iced::Shadow::default(),
         });
+    items.push(dismiss_btn.into());
 
     let menu = container(
-        column![copy_btn, dismiss_btn].spacing(0).width(Length::Fixed(200.0)),
+        Column::with_children(items).spacing(0).width(Length::Fixed(200.0)),
     )
     .padding(4)
     .width(Length::Fixed(200.0))

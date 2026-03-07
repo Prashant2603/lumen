@@ -1,11 +1,11 @@
-use iced::widget::{button, column, container, mouse_area, row, text};
+use iced::widget::{button, column, container, mouse_area, row, slider, text};
 use iced::{Color, Element, Length};
 
 use crate::app::Message;
 use crate::theme::{AppTheme, Palette};
 
 /// Full-screen overlay containing a centred settings card.
-pub fn view<'a>(app_theme: AppTheme, font_size: f32, line_wrap: bool, color_log_levels: bool, p: Palette) -> Element<'a, Message> {
+pub fn view<'a>(app_theme: AppTheme, font_size: f32, line_wrap: bool, color_log_levels: bool, bg_opacity: f32, p: Palette) -> Element<'a, Message> {
     let bg_p  = p.bg_primary;
     let bg_s  = p.bg_surface;
     let bg_h  = p.bg_hover;
@@ -175,6 +175,44 @@ pub fn view<'a>(app_theme: AppTheme, font_size: f32, line_wrap: bool, color_log_
     ]
     .spacing(6);
 
+    // ── Opacity section ────────────────────────────────────────────────────
+    let opacity_pct = (bg_opacity * 100.0).round() as u32;
+    let opacity_section = column![
+        text("Window Opacity").size(13).color(acc),
+        row![
+            slider(10.0..=100.0, bg_opacity * 100.0, |v| Message::SetOpacity(v / 100.0))
+                .width(Length::Fixed(180.0))
+                .height(14.0)
+                .style(move |_: &iced::Theme, status| {
+                    let handle_bg = match status {
+                        slider::Status::Hovered | slider::Status::Dragged =>
+                            Color { a: 1.0, ..acc },
+                        _ => Color { a: 0.85, ..acc },
+                    };
+                    slider::Style {
+                        rail: slider::Rail {
+                            backgrounds: (
+                                Color { a: 0.5, ..acc }.into(),
+                                Color { a: 0.2, ..fgm }.into(),
+                            ),
+                            width: 4.0,
+                            border: iced::Border { radius: 2.0.into(), ..Default::default() },
+                        },
+                        handle: slider::Handle {
+                            shape: slider::HandleShape::Circle { radius: 6.0 },
+                            background: handle_bg.into(),
+                            border_width: 0.0,
+                            border_color: Color::TRANSPARENT,
+                        },
+                    }
+                }),
+            text(format!("{}%", opacity_pct)).size(12).color(fgm),
+        ]
+        .spacing(10)
+        .align_y(iced::alignment::Vertical::Center),
+    ]
+    .spacing(8);
+
     // ── About ────────────────────────────────────────────────────────────────
     let about = column![
         text("Flash").size(13).color(acc),
@@ -223,6 +261,8 @@ pub fn view<'a>(app_theme: AppTheme, font_size: f32, line_wrap: bool, color_log_
             font_section,
             mk_divider(),
             wrap_section,
+            mk_divider(),
+            opacity_section,
             mk_divider(),
             about,
         ]
